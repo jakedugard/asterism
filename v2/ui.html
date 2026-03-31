@@ -316,35 +316,24 @@
   }
   .remove-btn:hover { color: #e85050; }
 
-  /* ── Surprise area ── */
-  #surprise-area {
-    flex: 1;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 60px;
-  }
-  #surprise-area.visible { display: flex; }
-
+  /* ── Surprise button (Saved panel footer) ── */
   .surprise-btn {
     background: none;
-    border: 1px solid #2a2a2a;
-    color: #555;
+    border: none;
+    color: #888;
     font-size: 11px;
     font-family: inherit;
-    padding: 9px 18px;
+    padding: 0;
     cursor: pointer;
-    border-radius: 3px;
-    letter-spacing: 0.03em;
     display: flex;
     align-items: center;
     gap: 6px;
-    transition: border-color 0.15s, color 0.15s;
+    transition: color 0.15s;
   }
-  .surprise-btn:hover { border-color: #555; color: #b2b2b2; }
-  .surprise-btn:hover svg path { fill: #b2b2b2; }
-  .surprise-btn:disabled { opacity: 0.4; cursor: default; }
-  .surprise-btn svg path { fill: #555; transition: fill 0.15s; }
+  .surprise-btn:hover { color: #eee; }
+  .surprise-btn:hover svg path { fill: #eee; }
+  .surprise-btn:disabled { opacity: 0.3; cursor: default; }
+  .surprise-btn svg path { fill: #888; transition: fill 0.15s; }
 
   /* ── Loading ── */
   .loading {
@@ -402,14 +391,6 @@
 <div id="content-area">
   <div class="loading" id="loading">Loading…</div>
 
-  <!-- Surprise me (home state when saved channels exist) -->
-  <div id="surprise-area">
-    <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">
-      <svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.467 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>
-      <span id="surprise-label">Surprise me</span>
-    </button>
-  </div>
-
   <!-- Recent panel -->
   <div class="recent-container" id="recent-container">
     <div class="recent-list" id="recent-list"></div>
@@ -426,6 +407,12 @@
     </div>
     <div class="saved-err" id="saved-err"></div>
     <div class="saved-list" id="saved-list"></div>
+    <div class="panel-footer">
+      <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">
+        <svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.467 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>
+        <span id="surprise-label">Surprise me</span>
+      </button>
+    </div>
   </div>
 
   <!-- Image grid -->
@@ -473,7 +460,6 @@
   const savedInputEl  = document.getElementById("saved-input");
   const addBtnEl      = document.getElementById("add-btn");
   const savedErrEl    = document.getElementById("saved-err");
-  const surpriseArea  = document.getElementById("surprise-area");
   const surpriseBtnEl = document.getElementById("surprise-btn");
   const surpriseLabel = document.getElementById("surprise-label");
   const byline        = document.getElementById("byline");
@@ -495,7 +481,6 @@
     gridWrap.style.display = "none";
     recentWrap.classList.remove("visible");
     savedWrap.classList.remove("visible");
-    surpriseArea.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
@@ -503,9 +488,8 @@
     byline.style.display = (!slug && !recentOpen && !savedOpen) ? "" : "none";
   }
 
-  function updateSurprise() {
-    const show = savedChannels.length > 0 && !slug && !recentOpen && !savedOpen;
-    surpriseArea.classList.toggle("visible", show);
+  function updateSurpriseBtn() {
+    surpriseBtnEl.disabled = savedChannels.length === 0;
   }
 
   // ── Reset ─────────────────────────────────────────────────
@@ -519,7 +503,7 @@
     recentBtn.classList.remove("active");
     savedBtn.classList.remove("active");
     updateByline();
-    updateSurprise();
+    updateSurpriseBtn();
   }
 
   // ── Recent ────────────────────────────────────────────────
@@ -539,7 +523,7 @@
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
     updateByline();
-    updateSurprise();
+    updateSurpriseBtn();
   }
 
   function renderRecents() {
@@ -591,7 +575,7 @@
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
     updateByline();
-    updateSurprise();
+    updateSurpriseBtn();
   }
 
   function renderSaved() {
@@ -650,7 +634,7 @@
       persistSaved();
       renderSaved();
       savedInputEl.value = "";
-      updateSurprise();
+      updateSurpriseBtn();
     } catch (err) {
       showSavedErr(err.message);
     }
@@ -661,7 +645,7 @@
     savedChannels = savedChannels.filter((c) => c.slug !== slug);
     persistSaved();
     renderSaved();
-    updateSurprise();
+    updateSurpriseBtn();
   }
 
   function persistSaved() {
@@ -810,7 +794,7 @@
     placedIds.clear();
     gridEl.innerHTML = "";
     updateByline();
-    updateSurprise();
+    updateSurpriseBtn();
 
     hideAll();
     showLoading();
@@ -844,7 +828,7 @@
       showError(err.message);
       slug = "";
       updateByline();
-      updateSurprise();
+      updateSurpriseBtn();
     }
 
     input.disabled = false;
@@ -999,7 +983,7 @@
 
       case "saved-loaded":
         savedChannels = msg.channels || [];
-        updateSurprise();
+        updateSurpriseBtn();
         break;
 
       case "place-success": {
@@ -1038,7 +1022,7 @@
 
   // ── Init ──────────────────────────────────────────────────
   updateByline();
-  updateSurprise();
+  updateSurpriseBtn();
 </script>
 </body>
 </html>
