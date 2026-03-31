@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    background: #000;
+    color: #b2b2b2;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    height: 44px;
+  }
+
+  .header-logo {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  .header-logo svg path { fill: #b2b2b2; transition: fill 0.15s; }
+  .header-logo:hover svg path,
+  .header:focus-within .header-logo svg path { fill: #eee; }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    color: #b2b2b2;
+    font-size: 11px;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+  input[type="text"]::placeholder { color: #b2b2b2; }
+  input[type="text"]:focus { color: #eee; }
+  input[type="text"]:focus::placeholder { color: #555; }
+
+  .recent-btn {
+    flex-shrink: 0;
+    margin-left: 14px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #888;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .recent-btn:hover { color: #b2b2b2; }
+  .recent-btn.active { color: #eee; }
+
+  /* ── Search results dropdown ── */
+  .channel-list { flex-shrink: 0; display: none; max-height: calc(100vh - 44px); overflow-y: auto; scrollbar-width: none; }
+  .channel-list::-webkit-scrollbar { display: none; }
+  .channel-list.visible { display: block; }
+
+  .channel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 12px;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #1a1a1a;
+    transition: background 0.1s;
+  }
+  .channel-row:last-child { border-bottom: none; }
+  .channel-row:hover { background: #111; }
+  .channel-row-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .channel-row-title { color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .channel-row-owner { color: #b2b2b2; }
+  .channel-row-count { flex-shrink: 0; color: #b2b2b2; }
+
+  /* ── Channel info bar ── */
+  .channel-info {
+    flex-shrink: 0;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-top: 1px solid #1a1a1a;
+  }
+  .channel-info.visible { display: flex; }
+  .channel-title { color: #eee; }
+  .channel-count { color: #b2b2b2; }
+
+  /* ── Error ── */
+  .error-msg {
+    flex-shrink: 0;
+    display: none;
+    padding: 8px 12px;
+    color: #e85050;
+  }
+  .error-msg.visible { display: block; }
+
+  /* ── Image grid ── */
+  .grid-container {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: none;
+    display: none;
+  }
+  .grid-container::-webkit-scrollbar { display: none; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .grid-item {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    cursor: pointer;
+    background: #111;
+  }
+  .grid-item img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.15s;
+  }
+  .grid-item:hover img { opacity: 0.7; }
+  .grid-item.placing::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+  }
+  .grid-item.placed img { opacity: 0.25; }
+
+  .scroll-sentinel { height: 1px; }
+
+  /* ── Recent panel ── */
+  .recent-container {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 1px solid #1a1a1a;
+  }
+  .recent-container.visible { display: flex; }
+
+  .recent-list {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .recent-list::-webkit-scrollbar { display: none; }
+
+  .recent-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .recent-footer {
+    flex-shrink: 0;
+    padding: 14px 12px;
+  }
+
+  .clear-link {
+    color: #888;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .clear-link:hover { color: #e85050; }
+
+  /* ── Loading ── */
+  .loading {
+    flex: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #b2b2b2;
+  }
+  .loading.visible { display: flex; }
+
+  /* ── Content area ── */
+  #content-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Byline ── */
+  #byline {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    color: #444;
+    font-size: 11px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  #byline:hover { color: #b2b2b2; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo" onclick="resetPlugin()">
+    <svg width="14" height="14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M75.8216 47.4384C76.1029 46.4526 77.5001 46.4526 77.7814 47.4384L82.1301 62.6763C82.281 63.2051 82.8243 63.5188 83.3578 63.3851L98.7285 59.5322C99.723 59.283 100.422 60.4929 99.7085 61.2295L88.6864 72.6145C88.3039 73.0096 88.3039 73.637 88.6864 74.0321L99.7085 85.4172C100.422 86.1537 99.723 87.3637 98.7285 87.1144L83.3578 83.2616C82.8243 83.1278 82.281 83.4415 82.1301 83.9704L77.7814 99.2082C77.5001 100.194 76.1029 100.194 75.8216 99.2082L71.4729 83.9704C71.322 83.4415 70.7787 83.1278 70.2452 83.2616L54.8745 87.1144C53.88 87.3637 53.1815 86.1537 53.8946 85.4172L64.9166 74.0321C65.2991 73.637 65.2991 73.0096 64.9166 72.6145L53.8946 61.2295C53.1815 60.4929 53.88 59.283 54.8745 59.5322L70.2452 63.3851C70.7787 63.5188 71.322 63.2051 71.4729 62.6763L75.8216 47.4384Z" fill="white"/><path d="M22.2186 47.4384C22.4999 46.4526 23.8971 46.4526 24.1784 47.4384L28.5271 62.6763C28.678 63.2051 29.2213 63.5188 29.7548 63.3851L45.1255 59.5322C46.12 59.283 46.8185 60.4929 46.1054 61.2295L35.0834 72.6145C34.7009 73.0096 34.7009 73.637 35.0834 74.0321L46.1054 85.4172C46.8185 86.1537 46.12 87.3637 45.1255 87.1144L29.7548 83.2616C29.2213 83.1278 28.678 83.4415 28.5271 83.9704L24.1784 99.2082C23.8971 100.194 22.4999 100.194 22.2186 99.2082L17.8699 83.9704C17.719 83.4415 17.1756 83.1278 16.6422 83.2616L1.27145 87.1144C0.277013 87.3637 -0.421555 86.1537 0.291539 85.4172L11.3136 74.0321C11.6961 73.637 11.6961 73.0096 11.3136 72.6145L0.291538 61.2295C-0.421555 60.4929 0.277013 59.283 1.27145 59.5322L16.6422 63.3851C17.1756 63.5188 17.719 63.2051 17.8699 62.6763L22.2186 47.4384Z" fill="white"/><path d="M49.0201 0.739384C49.3014 -0.246462 50.6986 -0.246461 50.9799 0.739384L55.3286 15.9773C55.4795 16.5061 56.0228 16.8198 56.5563 16.6861L71.927 12.8332C72.9215 12.5839 73.62 13.7939 72.907 14.5305L61.8849 25.9155C61.5024 26.3106 61.5024 26.938 61.8849 27.3331L72.907 38.7181C73.62 39.4547 72.9215 40.6647 71.927 40.4154L56.5563 36.5625C56.0228 36.4288 55.4795 36.7425 55.3286 37.2713L50.9799 52.5092C50.6986 53.4951 49.3014 53.4951 49.0201 52.5092L44.6714 37.2713C44.5205 36.7425 43.9772 36.4288 43.4437 36.5625L28.073 40.4154C27.0785 40.6647 26.38 39.4547 27.093 38.7181L38.1151 27.3331C38.4976 26.938 38.4976 26.3106 38.1151 25.9155L27.093 14.5305C26.38 13.7939 27.0785 12.5839 28.073 12.8332L43.4437 16.6861C43.9772 16.8198 44.5205 16.5061 44.6714 15.9773L49.0201 0.739384Z" fill="white"/></svg>
+  </div>
+  <input type="text" id="url-input" placeholder="Search or paste a public Are.na channel URL." />
+  <button class="recent-btn" id="recent-btn" onclick="toggleRecent()">Recent</button>
+</div>
+
+<div class="channel-list" id="search-results"></div>
+<div class="error-msg"   id="error-msg"></div>
+<div class="channel-info" id="channel-info">
+  <span class="channel-title" id="channel-title"></span>
+  <span class="channel-count" id="channel-count"></span>
+</div>
+
+<a id="byline" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
+
+<div id="content-area">
+  <div class="loading" id="loading">Loading…</div>
+
+  <div class="recent-container" id="recent-container">
+    <div class="recent-list" id="recent-list"></div>
+    <div class="recent-footer">
+      <a class="clear-link" href="#" onclick="clearRecents(); return false;">Clear history</a>
+    </div>
+  </div>
+
+  <div class="grid-container" id="grid-container">
+    <div class="grid" id="grid"></div>
+    <div class="scroll-sentinel" id="scroll-sentinel"></div>
+  </div>
+</div>
+
+<script>
+  const API    = "https://api.are.na/v2";
+  const PER    = 30;
+
+  // ── State ─────────────────────────────────────────────────
+  let slug         = "";
+  let page         = 1;
+  let totalPages   = 1;
+  let images       = [];
+  let placedIds    = new Set();
+  let loadingMore  = false;
+  let recentOpen   = false;
+  let recents      = [];
+
+  // ── DOM refs ──────────────────────────────────────────────
+  const input          = document.getElementById("url-input");
+  const errorEl        = document.getElementById("error-msg");
+  const searchEl       = document.getElementById("search-results");
+  const infoBar        = document.getElementById("channel-info");
+  const titleEl        = document.getElementById("channel-title");
+  const countEl        = document.getElementById("channel-count");
+  const loadingEl      = document.getElementById("loading");
+  const gridWrap       = document.getElementById("grid-container");
+  const gridEl         = document.getElementById("grid");
+  const sentinel       = document.getElementById("scroll-sentinel");
+  const recentWrap     = document.getElementById("recent-container");
+  const recentListEl   = document.getElementById("recent-list");
+  const recentBtn      = document.getElementById("recent-btn");
+  const byline         = document.getElementById("byline");
+
+  // ── Infinite scroll ───────────────────────────────────────
+  new IntersectionObserver(
+    (entries) => { if (entries[0].isIntersecting) loadMore(); },
+    { root: gridWrap, rootMargin: "200px" }
+  ).observe(sentinel);
+
+  // ── Visibility helpers ────────────────────────────────────
+  function showLoading()  { loadingEl.classList.add("visible"); }
+  function hideLoading()  { loadingEl.classList.remove("visible"); }
+  function showError(msg) { errorEl.textContent = msg; errorEl.classList.add("visible"); }
+  function hideError()    { errorEl.classList.remove("visible"); }
+
+  function hideAll() {
+    hideLoading();
+    gridWrap.style.display    = "none";
+    recentWrap.classList.remove("visible");
+    infoBar.classList.remove("visible");
+  }
+
+  function updateByline() {
+    byline.style.display = (!slug && !recentOpen) ? "" : "none";
+  }
+
+  // ── Reset ─────────────────────────────────────────────────
+  function resetPlugin() {
+    slug = ""; page = 1; totalPages = 1; images = [];
+    placedIds.clear();
+    input.value = "";
+    gridEl.innerHTML = "";
+    hideAll(); hideError(); hideSearch();
+    setRecentOpen(false);
+    updateByline();
+  }
+
+  // ── Recent ────────────────────────────────────────────────
+  function toggleRecent() { setRecentOpen(!recentOpen); }
+
+  function setRecentOpen(val) {
+    recentOpen = val;
+    recentBtn.classList.toggle("active", val);
+    if (val) {
+      hideAll(); hideError();
+      recentWrap.classList.add("visible");
+      renderRecents();
+    } else {
+      recentWrap.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
+    updateByline();
+  }
+
+  function renderRecents() {
+    if (!recents.length) {
+      recentListEl.innerHTML = `<div class="recent-empty">Channels you browse<br>will appear here.</div>`;
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    recents.forEach((ch) => {
+      const row = document.createElement("div");
+      row.className = "channel-row";
+      row.innerHTML = `
+        <div class="channel-row-left">
+          <span class="channel-row-title">${ch.title}</span>
+          <span class="channel-row-owner">${ch.owner}</span>
+        </div>
+        <span class="channel-row-count">${ch.imageCount > 0 ? ch.imageCount + " images" : ""}</span>`;
+      row.addEventListener("click", () => {
+        input.value = ch.slug;
+        setRecentOpen(false);
+        loadChannel(ch.slug);
+      });
+      frag.appendChild(row);
+    });
+    recentListEl.innerHTML = "";
+    recentListEl.appendChild(frag);
+  }
+
+  function clearRecents() {
+    recents = [];
+    renderRecents();
+    parent.postMessage({ pluginMessage: { type: "clear-recents" } }, "*");
+  }
+
+  // ── Search ────────────────────────────────────────────────
+  let searchTimer = null;
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      clearTimeout(searchTimer);
+      const firstRow = searchEl.querySelector(".channel-row");
+      if (firstRow) {
+        // Search results visible — load the first one
+        firstRow.dispatchEvent(new MouseEvent("mousedown"));
+      } else {
+        // No results showing — only submit if it looks like a URL or slug
+        const val = input.value.trim();
+        const looksLikeUrl = val.includes("are.na/") || val.includes("http");
+        const looksLikeSlug = /^[a-z0-9][a-z0-9-]*$/i.test(val);
+        if (looksLikeUrl || looksLikeSlug) {
+          hideSearch();
+          setRecentOpen(false);
+          submit();
+        }
+        // Otherwise (plain keyword with no results) — do nothing
+      }
+    } else if (e.key === "Escape") {
+      hideSearch();
+      input.blur();
+    }
+  });
+
+  input.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const val = input.value.trim();
+    if (!val || val.includes("are.na/") || val.includes("http")) { hideSearch(); return; }
+    searchTimer = setTimeout(() => runSearch(val), 350);
+  });
+
+  input.addEventListener("blur", () => setTimeout(hideSearch, 150));
+
+  function hideSearch() {
+    searchEl.classList.remove("visible");
+    searchEl.innerHTML = "";
+  }
+
+  async function runSearch(q) {
+    try {
+      const res  = await fetch(`${API}/search/channels?q=${encodeURIComponent(q)}&per=20`);
+      const data = await res.json();
+      const raw = Array.isArray(data.channels) ? data.channels : (data.channels?.results || []);
+      const channels = raw.slice().sort((a, b) => (b.length ?? 0) - (a.length ?? 0));
+      if (!channels.length) { hideSearch(); return; }
+
+      const frag = document.createDocumentFragment();
+      channels.forEach((ch) => {
+        const row = document.createElement("div");
+        row.className = "channel-row";
+        row.innerHTML = `
+          <div class="channel-row-left">
+            <span class="channel-row-title">${ch.title || ch.slug}</span>
+            <span class="channel-row-owner">${ch.user?.username || ""}</span>
+          </div>
+          <span class="channel-row-count">${ch.length ?? ""}</span>`;
+        row.addEventListener("mousedown", () => {
+          hideSearch();
+          input.value = ch.slug;
+          setRecentOpen(false);
+          loadChannel(ch.slug);
+        });
+        frag.appendChild(row);
+      });
+      searchEl.innerHTML = "";
+      searchEl.appendChild(frag);
+      searchEl.classList.add("visible");
+    } catch (_) { hideSearch(); }
+  }
+
+  // ── URL parsing ───────────────────────────────────────────
+  function parseSlug(raw) {
+    raw = raw.trim();
+    // are.na/username/channel-slug
+    const m = raw.match(/are\.na\/[^\/\?#]+\/([^\/\?#]+)/);
+    if (m && m[1] !== "channels" && m[1] !== "following" && m[1] !== "followers") return m[1];
+    // Plain slug
+    if (/^[a-z0-9][a-z0-9-]*$/i.test(raw)) return raw;
+    return null;
+  }
+
+  function submit() {
+    const s = parseSlug(input.value);
+    if (!s) {
+      showError("Paste a direct channel URL or search by keyword above.");
+      return;
+    }
+    loadChannel(s);
+  }
+
+  // ── Channel loading ───────────────────────────────────────
+  async function loadChannel(s) {
+    hideError();
+    slug = s; page = 1; images = [];
+    placedIds.clear();
+    gridEl.innerHTML = "";
+    updateByline();
+
+    hideAll();
+    showLoading();
+    input.disabled = true;
+
+    try {
+      const res  = await fetch(`${API}/channels/${s}?per=${PER}&page=1`);
+      if (!res.ok) throw new Error(res.status === 404 ? "Channel not found." : `Error ${res.status}.`);
+
+      const data   = await res.json();
+      totalPages   = Math.ceil((data.length || 0) / PER) || 1;
+      const title  = data.title  || s;
+      const owner  = data.user?.slug || "";
+      const imgs   = filterImages(data.contents);
+
+      titleEl.textContent = title;
+      countEl.textContent = `${imgs.length} images`;
+      infoBar.classList.add("visible");
+
+      images = imgs;
+      renderGrid();
+      hideLoading();
+      gridWrap.style.display = "block";
+
+      parent.postMessage({ pluginMessage: { type: "save-recent", slug: s, title, owner, imageCount: imgs.length } }, "*");
+
+      if (page < totalPages) loadMore();
+
+    } catch (err) {
+      hideLoading();
+      showError(err.message);
+      slug = "";
+      updateByline();
+    }
+
+    input.disabled = false;
+    input.blur();
+  }
+
+  async function loadMore() {
+    if (loadingMore || page >= totalPages) return;
+    loadingMore = true;
+    page++;
+    try {
+      const res  = await fetch(`${API}/channels/${slug}/contents?per=${PER}&page=${page}`);
+      const data = await res.json();
+      const imgs = filterImages(data.contents);
+      images     = images.concat(imgs);
+      countEl.textContent = `${images.length} images`;
+      appendGrid(imgs);
+    } catch (_) { page--; }
+    loadingMore = false;
+  }
+
+  // ── Grid ──────────────────────────────────────────────────
+  function filterImages(contents) {
+    if (!Array.isArray(contents)) return [];
+    return contents.filter((b) => b.class === "Image" && b.image?.original?.url);
+  }
+
+  function makeItem(block) {
+    const item = document.createElement("div");
+    item.className = "grid-item";
+    if (placedIds.has(block.id)) item.classList.add("placed");
+    item.dataset.id = block.id;
+
+    const img = document.createElement("img");
+    img.src     = block.image.thumb?.url || block.image.display?.url || block.image.original.url;
+    img.alt     = block.title || "";
+    img.loading = "lazy";
+    img.onerror = () => { item.style.display = "none"; };
+    item.appendChild(img);
+
+    item.addEventListener("click", () => {
+      if (item.classList.contains("placing")) return;
+      item.classList.add("placing");
+      const orig = block.image.original;
+      parent.postMessage({
+        pluginMessage: {
+          type:   "place-image",
+          id:     block.id,
+          url:    orig.url,
+          width:  orig.width  || 800,
+          height: orig.height || 600,
+          title:  block.title || "Are.na image",
+        }
+      }, "*");
+    });
+    return item;
+  }
+
+  function renderGrid() {
+    const frag = document.createDocumentFragment();
+    images.forEach((b) => frag.appendChild(makeItem(b)));
+    gridEl.innerHTML = "";
+    gridEl.appendChild(frag);
+  }
+
+  function appendGrid(blocks) {
+    const frag = document.createDocumentFragment();
+    blocks.forEach((b) => frag.appendChild(makeItem(b)));
+    gridEl.appendChild(frag);
+  }
+
+  // ── Messages from code.js ─────────────────────────────────
+  window.onmessage = ({ data }) => {
+    const msg = data.pluginMessage;
+    if (!msg) return;
+
+    switch (msg.type) {
+      case "recents-loaded":
+        recents = msg.recents || [];
+        break;
+
+      case "recent-saved":
+        recents = msg.recents;
+        break;
+
+      case "place-success": {
+        placedIds.add(msg.id);
+        const item = gridEl.querySelector(`[data-id="${msg.id}"]`);
+        if (item) { item.classList.remove("placing"); item.classList.add("placed"); }
+        break;
+      }
+
+      case "place-error": {
+        const item = gridEl.querySelector(`[data-id="${msg.id}"]`);
+        if (item) item.classList.remove("placing");
+        break;
+      }
+    }
+  };
+
+  // ── Init ──────────────────────────────────────────────────
+  updateByline();
+</script>
+</body>
+</html>
