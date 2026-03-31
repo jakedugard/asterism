@@ -319,9 +319,14 @@
     border-radius: 3px;
     letter-spacing: 0.03em;
     transition: border-color 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .surprise-btn:hover { border-color: #555; color: #b2b2b2; }
+  .surprise-btn:hover svg path { fill: #b2b2b2; }
   .surprise-btn:disabled { opacity: 0.4; cursor: default; }
+  .surprise-btn svg path { fill: #555; transition: fill 0.15s; }
 
   /* ── Loading ── */
   .loading {
@@ -400,7 +405,10 @@
 
   <!-- Surprise area (home state when token connected) -->
   <div id="surprise-area">
-    <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">✦ Surprise me</button>
+    <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">
+      <svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.467 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>
+      <span id="surprise-label">Surprise me</span>
+    </button>
   </div>
 
   <!-- Recent panel -->
@@ -471,6 +479,7 @@
   const settingsErrEl       = document.getElementById("settings-err");
   const surpriseAreaEl      = document.getElementById("surprise-area");
   const surpriseBtnEl       = document.getElementById("surprise-btn");
+  const surpriseLabelEl     = document.getElementById("surprise-label");
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(
@@ -922,37 +931,51 @@
     if (surpriseRunning || !token) return;
     surpriseRunning = true;
     surpriseBtnEl.disabled = true;
-    surpriseBtnEl.textContent = "Gathering…";
+    surpriseLabelEl.textContent = "Gathering…";
 
     try {
-      // Fetch user's channels
-      const res = await authFetch(`${API_V3}/me/channels?per=100`);
-      if (!res.ok) throw new Error("Couldn't fetch your channels.");
-      const data = await res.json();
+      let channelPool = [];
 
-      const allChannels = (data.channels || []).filter((ch) => (ch.length || 0) > 0);
-      if (!allChannels.length) throw new Error("No channels with content found.");
+      // Try /v2/me → /v2/users/{slug}/channels
+      try {
+        const meRes = await authFetch(`${API_V2}/me`);
+        if (meRes.ok) {
+          const me    = await meRes.json();
+          const chRes = await authFetch(`${API_V2}/users/${me.slug}/channels?per=100`);
+          if (chRes.ok) {
+            const chData = await chRes.json();
+            channelPool = (chData.channels || [])
+              .filter((ch) => (ch.length || 0) > 0)
+              .map((ch) => ({ slug: ch.slug, length: ch.length || 20 }));
+          }
+        }
+      } catch (_) {}
 
-      // Randomly pick 3–5 channels
-      const shuffledCh = allChannels.slice().sort(() => Math.random() - 0.5);
+      // Fall back to recently browsed channels
+      if (!channelPool.length && recents.length) {
+        channelPool = recents.map((r) => ({ slug: r.slug, length: r.imageCount || 20 }));
+      }
+
+      if (!channelPool.length) {
+        throw new Error("Browse some channels first, then try again.");
+      }
+
+      // Shuffle and pick 3–5
+      const shuffledCh = channelPool.slice().sort(() => Math.random() - 0.5);
       const picked     = shuffledCh.slice(0, Math.min(5, shuffledCh.length));
 
       const seen      = new Set();
       const allImages = [];
 
-      surpriseBtnEl.textContent = "Building…";
+      surpriseLabelEl.textContent = "Building…";
 
       await Promise.all(picked.map(async (ch) => {
         try {
-          // Land on a random page of the channel
-          const totalCh = ch.length || 1;
-          const maxPage = Math.max(1, Math.ceil(totalCh / 20));
+          const maxPage = Math.max(1, Math.ceil((ch.length || 20) / 20));
           const pg      = Math.ceil(Math.random() * maxPage);
           const r       = await authFetch(`${API_V2}/channels/${ch.slug}/contents?per=20&page=${pg}`);
           const d       = await r.json();
           const imgs    = filterImages(d.contents || []);
-
-          // Shuffle and take up to 4 from this channel
           const shuffledImgs = imgs.slice().sort(() => Math.random() - 0.5).slice(0, 4);
           for (const b of shuffledImgs) {
             if (seen.has(b.image.original.url)) continue;
@@ -969,9 +992,8 @@
         } catch (_) {}
       }));
 
-      if (!allImages.length) throw new Error("No images found in your channels.");
+      if (!allImages.length) throw new Error("No images found.");
 
-      // Final shuffle and cap at 16
       const final = allImages.slice().sort(() => Math.random() - 0.5).slice(0, 16);
 
       parent.postMessage({
@@ -981,7 +1003,7 @@
     } catch (err) {
       surpriseRunning = false;
       surpriseBtnEl.disabled = false;
-      surpriseBtnEl.textContent = "✦ Surprise me";
+      surpriseLabelEl.textContent = "Surprise me";
       showError("Surprise failed: " + err.message);
     }
   }
@@ -1034,7 +1056,7 @@
         generatingMoodboard = false;
         surpriseRunning     = false;
         surpriseBtnEl.disabled = false;
-        surpriseBtnEl.textContent = "✦ Surprise me";
+        surpriseLabelEl.textContent = "Surprise me";
         countEl.textContent = `${images.length} images`;
         document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
         break;
@@ -1043,7 +1065,7 @@
         generatingMoodboard = false;
         surpriseRunning     = false;
         surpriseBtnEl.disabled = false;
-        surpriseBtnEl.textContent = "✦ Surprise me";
+        surpriseLabelEl.textContent = "Surprise me";
         countEl.textContent = `${images.length} images`;
         document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
         showError("Moodboard failed: " + msg.error);
