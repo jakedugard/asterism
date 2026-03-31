@@ -222,6 +222,7 @@
   /* ── Settings panel ── */
   .settings-panel {
     flex: 1;
+    min-height: 0;
     display: none;
     flex-direction: column;
     padding: 16px 12px;
@@ -299,12 +300,23 @@
   .settings-user-name { color: #b2b2b2; }
   .settings-user-name span { color: #eee; }
 
+  #settings-grid-wrap {
+    margin: 4px -12px -16px;
+  }
+  #settings-grid-loading {
+    display: none;
+    padding: 16px 12px;
+    color: #555;
+  }
+  #settings-grid-loading.visible { display: block; }
+
   /* ── Surprise area ── */
   #surprise-area {
     flex: 1;
     display: none;
     align-items: center;
     justify-content: center;
+    padding-bottom: 60px;
   }
   #surprise-area.visible { display: flex; }
 
@@ -401,6 +413,10 @@
         <a href="#" class="clear-link" onclick="disconnectToken(); return false;">Disconnect</a>
       </div>
     </div>
+    <div id="settings-grid-wrap" style="display:none">
+      <div id="settings-grid-loading">Loading…</div>
+      <div class="grid" id="settings-grid"></div>
+    </div>
   </div>
 
   <!-- Surprise area (home state when token connected) -->
@@ -480,6 +496,9 @@
   const surpriseAreaEl      = document.getElementById("surprise-area");
   const surpriseBtnEl       = document.getElementById("surprise-btn");
   const surpriseLabelEl     = document.getElementById("surprise-label");
+  const settingsGridWrap    = document.getElementById("settings-grid-wrap");
+  const settingsGridEl      = document.getElementById("settings-grid");
+  const settingsGridLoading = document.getElementById("settings-grid-loading");
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(
@@ -589,6 +608,7 @@
       settingsPanelEl.classList.add("visible");
       if (token && connectedUser) {
         showSettingsConnected();
+        loadSettingsGrid();
       } else {
         showSettingsDisconnected();
       }
@@ -628,6 +648,7 @@
       connectedUser = { slug: user.slug || user.username || "you" };
       parent.postMessage({ pluginMessage: { type: "save-token", token: token } }, "*");
       showSettingsConnected();
+      loadSettingsGrid();
       updateSurprise();
       updateAccountBtn();
     } catch (err) {
@@ -641,6 +662,8 @@
     token = null;
     connectedUser = null;
     tokenInputEl.value = "";
+    settingsGridWrap.style.display = "none";
+    settingsGridEl.innerHTML = "";
     showSettingsDisconnected();
     parent.postMessage({ pluginMessage: { type: "clear-token" } }, "*");
     updateSurprise();
@@ -923,6 +946,72 @@
       showError("Moodboard failed: " + err.message);
       btn.disabled = false;
       generatingMoodboard = false;
+    }
+  }
+
+  // ── Settings grid ────────────────────────────────────────
+  async function loadSettingsGrid() {
+    if (!token) return;
+    settingsGridWrap.style.display = "block";
+    settingsGridEl.innerHTML = "";
+    settingsGridLoading.classList.add("visible");
+
+    try {
+      let channelPool = [];
+
+      try {
+        const meRes = await authFetch(`${API_V2}/me`);
+        if (meRes.ok) {
+          const me    = await meRes.json();
+          const chRes = await authFetch(`${API_V2}/users/${me.slug}/channels?per=50`);
+          if (chRes.ok) {
+            const chData = await chRes.json();
+            channelPool = (chData.channels || []).filter((ch) => (ch.length || 0) > 0);
+          }
+        }
+      } catch (_) {}
+
+      if (!channelPool.length && recents.length) {
+        channelPool = recents.map((r) => ({ slug: r.slug, length: r.imageCount || 20 }));
+      }
+
+      if (!channelPool.length) {
+        settingsGridLoading.classList.remove("visible");
+        return;
+      }
+
+      // Pick up to 8 random channels, grab ~5 images each
+      const picked = channelPool.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+      const seen   = new Set();
+      const collected = [];
+
+      await Promise.all(picked.map(async (ch) => {
+        try {
+          const maxPage = Math.max(1, Math.ceil((ch.length || 20) / 20));
+          const pg      = Math.ceil(Math.random() * maxPage);
+          const r       = await authFetch(`${API_V2}/channels/${ch.slug}/contents?per=20&page=${pg}`);
+          const d       = await r.json();
+          const imgs    = filterImages(d.contents || []);
+          imgs.slice().sort(() => Math.random() - 0.5).slice(0, 5).forEach((b) => {
+            if (!seen.has(b.image.original.url)) {
+              seen.add(b.image.original.url);
+              collected.push(b);
+            }
+          });
+        } catch (_) {}
+      }));
+
+      settingsGridLoading.classList.remove("visible");
+
+      if (!collected.length) return;
+
+      const final = collected.slice().sort(() => Math.random() - 0.5);
+      const frag  = document.createDocumentFragment();
+      final.forEach((b) => frag.appendChild(makeItem(b)));
+      settingsGridEl.appendChild(frag);
+
+    } catch (_) {
+      settingsGridLoading.classList.remove("visible");
     }
   }
 
