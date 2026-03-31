@@ -906,12 +906,10 @@
         title:  seedBlock.title || "Are.na image",
       };
 
-      // Fetch block data — auth token may unlock `channels` co-occurrence field
+      // Fetch block data — auth token unlocks `connections` (co-occurrence channels)
       const blockRes  = await authFetch(`${API_V2}/blocks/${seedBlock.id}`);
       const blockData = await blockRes.json();
-      console.log("[asterism] block keys:", Object.keys(blockData).join(", "));
-      console.log("[asterism] block channels:", JSON.stringify((blockData.channels || blockData.connections)?.slice(0,3)));
-      const connections = (blockData.channels || blockData.connections || []).slice(0, 8);
+      const connections = (blockData.connections || []).slice(0, 8);
 
       const seen      = new Set([orig.url]);
       const allImages = [seedImg];
@@ -959,17 +957,16 @@
     try {
       let channelPool = [];
 
-      try {
-        const meRes = await authFetch(`${API_V2}/me`);
-        if (meRes.ok) {
-          const me    = await meRes.json();
-          const chRes = await authFetch(`${API_V2}/users/${me.slug}/channels?per=50`);
+      if (connectedUser?.slug) {
+        try {
+          const chRes = await authFetch(`${API_V2}/users/${connectedUser.slug}/channels?per=100`);
           if (chRes.ok) {
             const chData = await chRes.json();
-            channelPool = (chData.channels || []).filter((ch) => (ch.length || 0) > 0);
+            const raw = chData.channels || chData || [];
+            channelPool = Array.isArray(raw) ? raw.filter((ch) => (ch.length || 0) > 0) : [];
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
 
       if (!channelPool.length) {
         settingsGridLoading.classList.remove("visible");
@@ -1021,20 +1018,19 @@
     try {
       let channelPool = [];
 
-      // Try /v2/me → /v2/users/{slug}/channels
-      try {
-        const meRes = await authFetch(`${API_V2}/me`);
-        if (meRes.ok) {
-          const me    = await meRes.json();
-          const chRes = await authFetch(`${API_V2}/users/${me.slug}/channels?per=100`);
+      // Use slug from token verification → /v2/users/{slug}/channels
+      if (connectedUser?.slug) {
+        try {
+          const chRes = await authFetch(`${API_V2}/users/${connectedUser.slug}/channels?per=100`);
           if (chRes.ok) {
             const chData = await chRes.json();
-            channelPool = (chData.channels || [])
-              .filter((ch) => (ch.length || 0) > 0)
-              .map((ch) => ({ slug: ch.slug, length: ch.length || 20 }));
+            const raw = chData.channels || chData || [];
+            channelPool = Array.isArray(raw)
+              ? raw.filter((ch) => (ch.length || 0) > 0).map((ch) => ({ slug: ch.slug, length: ch.length || 20 }))
+              : [];
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
 
       // Fall back to recently browsed channels
       if (!channelPool.length && recents.length) {
