@@ -971,10 +971,6 @@
         }
       } catch (_) {}
 
-      if (!channelPool.length && recents.length) {
-        channelPool = recents.map((r) => ({ slug: r.slug, length: r.imageCount || 20 }));
-      }
-
       if (!channelPool.length) {
         settingsGridLoading.classList.remove("visible");
         return;
