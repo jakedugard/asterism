@@ -1,8 +1,11 @@
 figma.showUI(__html__, { width: 440, height: 600, themeColors: false });
 
-// Send saved recents to UI on startup
+// Send saved recents + token to UI on startup
 figma.clientStorage.getAsync("arena-recents").then((recents) => {
   figma.ui.postMessage({ type: "recents-loaded", recents: recents || [] });
+});
+figma.clientStorage.getAsync("arena-token").then((t) => {
+  figma.ui.postMessage({ type: "token-loaded", token: t || null });
 });
 
 figma.ui.onmessage = async (msg) => {
@@ -22,24 +25,33 @@ figma.ui.onmessage = async (msg) => {
     await figma.clientStorage.setAsync("arena-recents", []);
   }
 
+  // ── Token ─────────────────────────────────────────────────
+  if (msg.type === "save-token") {
+    await figma.clientStorage.setAsync("arena-token", msg.token);
+  }
+
+  if (msg.type === "clear-token") {
+    await figma.clientStorage.setAsync("arena-token", null);
+  }
+
   // ── Place single image ────────────────────────────────────
   if (msg.type === "place-image") {
     try {
-      const response = await fetch(msg.url);
-      const buffer   = await response.arrayBuffer();
+      const response  = await fetch(msg.url);
+      const buffer    = await response.arrayBuffer();
       const imageHash = figma.createImage(new Uint8Array(buffer)).hash;
 
-      const node = figma.createRectangle();
-      const aspectRatio   = msg.width / msg.height;
-      const displayWidth  = Math.min(msg.width, 800);
-      const displayHeight = displayWidth / aspectRatio;
+      const node        = figma.createRectangle();
+      const aspectRatio = msg.width / msg.height;
+      const displayW    = Math.min(msg.width, 800);
+      const displayH    = displayW / aspectRatio;
 
-      node.resize(displayWidth, displayHeight);
+      node.resize(displayW, displayH);
       node.name = msg.title || "Are.na image";
 
       const center = figma.viewport.center;
-      node.x = center.x - displayWidth / 2;
-      node.y = center.y - displayHeight / 2;
+      node.x = center.x - displayW / 2;
+      node.y = center.y - displayH / 2;
 
       node.fills = [{ type: "IMAGE", imageHash, scaleMode: "FILL" }];
       figma.currentPage.appendChild(node);
@@ -58,7 +70,6 @@ figma.ui.onmessage = async (msg) => {
     const GAP   = 16;
 
     try {
-      // Fetch all images in parallel
       const results = await Promise.all(
         msg.images.map(async (img) => {
           try {
@@ -75,20 +86,20 @@ figma.ui.onmessage = async (msg) => {
       const valid = results.filter(Boolean);
       if (!valid.length) throw new Error("No images could be loaded.");
 
-      // Create auto layout frame — horizontal wrap, 4 columns
+      // Auto layout frame — horizontal wrap, 4 columns, hugs height
       const frameW = COLS * COL_W + (COLS - 1) * GAP + GAP * 2;
       const frame  = figma.createFrame();
       frame.name   = msg.title ? `Moodboard — ${msg.title}` : "Asterism Moodboard";
       frame.fills  = [];
-      frame.clipsContent        = false;
-      frame.layoutMode          = "HORIZONTAL";
-      frame.layoutWrap          = "WRAP";
-      frame.itemSpacing         = GAP;
-      frame.counterAxisSpacing  = GAP;
-      frame.paddingTop          = GAP;
-      frame.paddingBottom       = GAP;
-      frame.paddingLeft         = GAP;
-      frame.paddingRight        = GAP;
+      frame.clipsContent            = false;
+      frame.layoutMode              = "HORIZONTAL";
+      frame.layoutWrap              = "WRAP";
+      frame.itemSpacing             = GAP;
+      frame.counterAxisSpacing      = GAP;
+      frame.paddingTop              = GAP;
+      frame.paddingBottom           = GAP;
+      frame.paddingLeft             = GAP;
+      frame.paddingRight            = GAP;
       frame.primaryAxisSizingMode   = "FIXED";
       frame.counterAxisSizingMode   = "AUTO";
       frame.primaryAxisAlignItems   = "MIN";
@@ -97,13 +108,13 @@ figma.ui.onmessage = async (msg) => {
 
       for (const img of valid) {
         const aspect = (img.width && img.height) ? img.width / img.height : 1;
-        const fw = COL_W;
-        const fh = Math.max(Math.round(COL_W / aspect), 40);
+        const fw     = COL_W;
+        const fh     = Math.max(Math.round(COL_W / aspect), 40);
 
-        const rect = figma.createRectangle();
+        const rect  = figma.createRectangle();
         rect.resize(fw, fh);
-        rect.name  = img.title || "Image";
-        rect.fills = [{ type: "IMAGE", imageHash: img.hash, scaleMode: "FIT" }];
+        rect.name   = img.title || "Image";
+        rect.fills  = [{ type: "IMAGE", imageHash: img.hash, scaleMode: "FIT" }];
         rect.layoutSizingHorizontal = "FIXED";
         rect.layoutSizingVertical   = "FIXED";
         frame.appendChild(rect);

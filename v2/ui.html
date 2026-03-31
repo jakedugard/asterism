@@ -52,7 +52,7 @@
   input[type="text"]:focus { color: #eee; }
   input[type="text"]:focus::placeholder { color: #555; }
 
-  .recent-btn {
+  .header-btn {
     flex-shrink: 0;
     margin-left: 14px;
     background: none;
@@ -65,8 +65,9 @@
     white-space: nowrap;
     transition: color 0.15s;
   }
-  .recent-btn:hover { color: #b2b2b2; }
-  .recent-btn.active { color: #eee; }
+  .header-btn:hover { color: #b2b2b2; }
+  .header-btn.active { color: #eee; }
+  .header-btn.connected { color: #b2b2b2; }
 
   /* ── Search results dropdown ── */
   .channel-list { flex-shrink: 0; display: none; max-height: calc(100vh - 44px); overflow-y: auto; scrollbar-width: none; }
@@ -218,6 +219,110 @@
   }
   .clear-link:hover { color: #e85050; }
 
+  /* ── Settings panel ── */
+  .settings-panel {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    padding: 16px 12px;
+    gap: 14px;
+    border-top: 1px solid #1a1a1a;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .settings-panel::-webkit-scrollbar { display: none; }
+  .settings-panel.visible { display: flex; }
+
+  .settings-label {
+    display: block;
+    color: #888;
+    margin-bottom: 10px;
+  }
+
+  .token-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .token-field {
+    flex: 1;
+    min-width: 0;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 3px;
+    padding: 7px 8px;
+    color: #b2b2b2;
+    font-size: 11px;
+    font-family: monospace;
+    outline: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .token-field:focus { border-color: #444; color: #eee; }
+  .token-field::placeholder { color: #333; }
+
+  .connect-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid #333;
+    color: #b2b2b2;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 7px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .connect-btn:hover { border-color: #666; color: #eee; }
+  .connect-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .settings-err {
+    color: #e85050;
+    display: none;
+    margin-bottom: 4px;
+  }
+  .settings-err.visible { display: block; }
+
+  .settings-hint {
+    color: #555;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .settings-hint:hover { color: #888; }
+
+  .settings-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-user-name { color: #b2b2b2; }
+  .settings-user-name span { color: #eee; }
+
+  /* ── Surprise area ── */
+  #surprise-area {
+    flex: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #surprise-area.visible { display: flex; }
+
+  .surprise-btn {
+    background: none;
+    border: 1px solid #2a2a2a;
+    color: #555;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 9px 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .surprise-btn:hover { border-color: #555; color: #b2b2b2; }
+  .surprise-btn:disabled { opacity: 0.4; cursor: default; }
+
   /* ── Loading ── */
   .loading {
     flex: 1;
@@ -258,7 +363,8 @@
     <svg width="14" height="14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M75.8216 47.4384C76.1029 46.4526 77.5001 46.4526 77.7814 47.4384L82.1301 62.6763C82.281 63.2051 82.8243 63.5188 83.3578 63.3851L98.7285 59.5322C99.723 59.283 100.422 60.4929 99.7085 61.2295L88.6864 72.6145C88.3039 73.0096 88.3039 73.637 88.6864 74.0321L99.7085 85.4172C100.422 86.1537 99.723 87.3637 98.7285 87.1144L83.3578 83.2616C82.8243 83.1278 82.281 83.4415 82.1301 83.9704L77.7814 99.2082C77.5001 100.194 76.1029 100.194 75.8216 99.2082L71.4729 83.9704C71.322 83.4415 70.7787 83.1278 70.2452 83.2616L54.8745 87.1144C53.88 87.3637 53.1815 86.1537 53.8946 85.4172L64.9166 74.0321C65.2991 73.637 65.2991 73.0096 64.9166 72.6145L53.8946 61.2295C53.1815 60.4929 53.88 59.283 54.8745 59.5322L70.2452 63.3851C70.7787 63.5188 71.322 63.2051 71.4729 62.6763L75.8216 47.4384Z" fill="white"/><path d="M22.2186 47.4384C22.4999 46.4526 23.8971 46.4526 24.1784 47.4384L28.5271 62.6763C28.678 63.2051 29.2213 63.5188 29.7548 63.3851L45.1255 59.5322C46.12 59.283 46.8185 60.4929 46.1054 61.2295L35.0834 72.6145C34.7009 73.0096 34.7009 73.637 35.0834 74.0321L46.1054 85.4172C46.8185 86.1537 46.12 87.3637 45.1255 87.1144L29.7548 83.2616C29.2213 83.1278 28.678 83.4415 28.5271 83.9704L24.1784 99.2082C23.8971 100.194 22.4999 100.194 22.2186 99.2082L17.8699 83.9704C17.719 83.4415 17.1756 83.1278 16.6422 83.2616L1.27145 87.1144C0.277013 87.3637 -0.421555 86.1537 0.291539 85.4172L11.3136 74.0321C11.6961 73.637 11.6961 73.0096 11.3136 72.6145L0.291538 61.2295C-0.421555 60.4929 0.277013 59.283 1.27145 59.5322L16.6422 63.3851C17.1756 63.5188 17.719 63.2051 17.8699 62.6763L22.2186 47.4384Z" fill="white"/><path d="M49.0201 0.739384C49.3014 -0.246462 50.6986 -0.246461 50.9799 0.739384L55.3286 15.9773C55.4795 16.5061 56.0228 16.8198 56.5563 16.6861L71.927 12.8332C72.9215 12.5839 73.62 13.7939 72.907 14.5305L61.8849 25.9155C61.5024 26.3106 61.5024 26.938 61.8849 27.3331L72.907 38.7181C73.62 39.4547 72.9215 40.6647 71.927 40.4154L56.5563 36.5625C56.0228 36.4288 55.4795 36.7425 55.3286 37.2713L50.9799 52.5092C50.6986 53.4951 49.3014 53.4951 49.0201 52.5092L44.6714 37.2713C44.5205 36.7425 43.9772 36.4288 43.4437 36.5625L28.073 40.4154C27.0785 40.6647 26.38 39.4547 27.093 38.7181L38.1151 27.3331C38.4976 26.938 38.4976 26.3106 38.1151 25.9155L27.093 14.5305C26.38 13.7939 27.0785 12.5839 28.073 12.8332L43.4437 16.6861C43.9772 16.8198 44.5205 16.5061 44.6714 15.9773L49.0201 0.739384Z" fill="white"/></svg>
   </div>
   <input type="text" id="url-input" placeholder="Search or paste a public Are.na channel URL." />
-  <button class="recent-btn" id="recent-btn" onclick="toggleRecent()">Recent</button>
+  <button class="header-btn" id="recent-btn" onclick="toggleRecent()">Recent</button>
+  <button class="header-btn" id="settings-btn" onclick="toggleSettings()">Account</button>
 </div>
 
 <div class="channel-list" id="search-results"></div>
@@ -273,6 +379,31 @@
 <div id="content-area">
   <div class="loading" id="loading">Loading…</div>
 
+  <!-- Settings panel -->
+  <div class="settings-panel" id="settings-panel">
+    <div id="settings-disconnected">
+      <span class="settings-label">Are.na personal token</span>
+      <div class="token-row">
+        <input type="password" class="token-field" id="token-input" placeholder="Paste your access token…" />
+        <button class="connect-btn" id="connect-btn" onclick="connectToken()">Connect</button>
+      </div>
+      <div class="settings-err" id="settings-err"></div>
+      <a href="#" class="settings-hint" onclick="window.open('https://dev.are.na/oauth/applications'); return false;">Get your token at dev.are.na ↗</a>
+    </div>
+    <div id="settings-connected" style="display:none">
+      <div class="settings-user">
+        <span class="settings-user-name">Connected as <span id="settings-username"></span></span>
+        <a href="#" class="clear-link" onclick="disconnectToken(); return false;">Disconnect</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Surprise area (home state when token connected) -->
+  <div id="surprise-area">
+    <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">✦ Surprise me</button>
+  </div>
+
+  <!-- Recent panel -->
   <div class="recent-container" id="recent-container">
     <div class="recent-list" id="recent-list"></div>
     <div class="recent-footer">
@@ -280,6 +411,7 @@
     </div>
   </div>
 
+  <!-- Image grid -->
   <div class="grid-container" id="grid-container">
     <div class="grid" id="grid"></div>
     <div class="scroll-sentinel" id="scroll-sentinel"></div>
@@ -287,34 +419,58 @@
 </div>
 
 <script>
-  const API    = "https://api.are.na/v2";
+  const API_V2 = "https://api.are.na/v2";
+  const API_V3 = "https://api.are.na/v3";
   const PER    = 30;
 
   // ── State ─────────────────────────────────────────────────
-  let slug         = "";
-  let page         = 1;
-  let totalPages   = 1;
-  let images       = [];
-  let placedIds    = new Set();
-  let loadingMore  = false;
-  let recentOpen   = false;
-  let recents      = [];
+  let slug            = "";
+  let page            = 1;
+  let totalPages      = 1;
+  let images          = [];
+  let placedIds       = new Set();
+  let loadingMore     = false;
+  let recentOpen      = false;
+  let recents         = [];
+  let token           = null;
+  let connectedUser   = null;
+  let settingsOpen    = false;
+  let surpriseRunning = false;
+  let generatingMoodboard = false;
+
+  // ── Auth helper ───────────────────────────────────────────
+  function authFetch(url, options) {
+    options = options || {};
+    if (!token) return fetch(url, options);
+    const headers = Object.assign({}, options.headers || {}, { "Authorization": "Bearer " + token });
+    return fetch(url, Object.assign({}, options, { headers: headers }));
+  }
 
   // ── DOM refs ──────────────────────────────────────────────
-  const input          = document.getElementById("url-input");
-  const errorEl        = document.getElementById("error-msg");
-  const searchEl       = document.getElementById("search-results");
-  const infoBar        = document.getElementById("channel-info");
-  const titleEl        = document.getElementById("channel-title");
-  const countEl        = document.getElementById("channel-count");
-  const loadingEl      = document.getElementById("loading");
-  const gridWrap       = document.getElementById("grid-container");
-  const gridEl         = document.getElementById("grid");
-  const sentinel       = document.getElementById("scroll-sentinel");
-  const recentWrap     = document.getElementById("recent-container");
-  const recentListEl   = document.getElementById("recent-list");
-  const recentBtn      = document.getElementById("recent-btn");
-  const byline         = document.getElementById("byline");
+  const input               = document.getElementById("url-input");
+  const errorEl             = document.getElementById("error-msg");
+  const searchEl            = document.getElementById("search-results");
+  const infoBar             = document.getElementById("channel-info");
+  const titleEl             = document.getElementById("channel-title");
+  const countEl             = document.getElementById("channel-count");
+  const loadingEl           = document.getElementById("loading");
+  const gridWrap            = document.getElementById("grid-container");
+  const gridEl              = document.getElementById("grid");
+  const sentinel            = document.getElementById("scroll-sentinel");
+  const recentWrap          = document.getElementById("recent-container");
+  const recentListEl        = document.getElementById("recent-list");
+  const recentBtn           = document.getElementById("recent-btn");
+  const byline              = document.getElementById("byline");
+  const settingsBtn         = document.getElementById("settings-btn");
+  const settingsPanelEl     = document.getElementById("settings-panel");
+  const settingsDiscoEl     = document.getElementById("settings-disconnected");
+  const settingsConEl       = document.getElementById("settings-connected");
+  const settingsUsernameEl  = document.getElementById("settings-username");
+  const tokenInputEl        = document.getElementById("token-input");
+  const connectBtnEl        = document.getElementById("connect-btn");
+  const settingsErrEl       = document.getElementById("settings-err");
+  const surpriseAreaEl      = document.getElementById("surprise-area");
+  const surpriseBtnEl       = document.getElementById("surprise-btn");
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(
@@ -330,13 +486,25 @@
 
   function hideAll() {
     hideLoading();
-    gridWrap.style.display    = "none";
+    gridWrap.style.display = "none";
     recentWrap.classList.remove("visible");
+    settingsPanelEl.classList.remove("visible");
+    surpriseAreaEl.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
   function updateByline() {
-    byline.style.display = (!slug && !recentOpen) ? "" : "none";
+    byline.style.display = (!slug && !recentOpen && !settingsOpen) ? "" : "none";
+  }
+
+  function updateSurprise() {
+    const show = !!token && !slug && !recentOpen && !settingsOpen;
+    surpriseAreaEl.classList.toggle("visible", show);
+  }
+
+  function updateAccountBtn() {
+    settingsBtn.classList.toggle("connected", !!token);
+    settingsBtn.classList.toggle("active", settingsOpen);
   }
 
   // ── Reset ─────────────────────────────────────────────────
@@ -347,7 +515,9 @@
     gridEl.innerHTML = "";
     hideAll(); hideError(); hideSearch();
     setRecentOpen(false);
+    if (settingsOpen) setSettingsOpen(false);
     updateByline();
+    updateSurprise();
   }
 
   // ── Recent ────────────────────────────────────────────────
@@ -365,6 +535,7 @@
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
     updateByline();
+    updateSurprise();
   }
 
   function renderRecents() {
@@ -399,6 +570,74 @@
     parent.postMessage({ pluginMessage: { type: "clear-recents" } }, "*");
   }
 
+  // ── Settings ──────────────────────────────────────────────
+  function toggleSettings() { setSettingsOpen(!settingsOpen); }
+
+  function setSettingsOpen(val) {
+    settingsOpen = val;
+    if (val) {
+      hideAll(); hideError();
+      settingsPanelEl.classList.add("visible");
+      if (token && connectedUser) {
+        showSettingsConnected();
+      } else {
+        showSettingsDisconnected();
+      }
+    } else {
+      settingsPanelEl.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
+    updateByline();
+    updateSurprise();
+    updateAccountBtn();
+  }
+
+  function showSettingsConnected() {
+    settingsDiscoEl.style.display = "none";
+    settingsConEl.style.display   = "";
+    settingsUsernameEl.textContent = connectedUser.slug;
+  }
+
+  function showSettingsDisconnected() {
+    settingsConEl.style.display  = "none";
+    settingsDiscoEl.style.display = "";
+    settingsErrEl.classList.remove("visible");
+  }
+
+  async function connectToken() {
+    const raw = tokenInputEl.value.trim();
+    if (!raw) return;
+    connectBtnEl.disabled = true;
+    settingsErrEl.classList.remove("visible");
+    try {
+      const res = await fetch(API_V3 + "/me", {
+        headers: { "Authorization": "Bearer " + raw }
+      });
+      if (!res.ok) throw new Error("Invalid token — check and try again.");
+      const user = await res.json();
+      token = raw;
+      connectedUser = { slug: user.slug || user.username || "you" };
+      parent.postMessage({ pluginMessage: { type: "save-token", token: token } }, "*");
+      showSettingsConnected();
+      updateSurprise();
+      updateAccountBtn();
+    } catch (err) {
+      settingsErrEl.textContent = err.message;
+      settingsErrEl.classList.add("visible");
+    }
+    connectBtnEl.disabled = false;
+  }
+
+  function disconnectToken() {
+    token = null;
+    connectedUser = null;
+    tokenInputEl.value = "";
+    showSettingsDisconnected();
+    parent.postMessage({ pluginMessage: { type: "clear-token" } }, "*");
+    updateSurprise();
+    updateAccountBtn();
+  }
+
   // ── Search ────────────────────────────────────────────────
   let searchTimer = null;
 
@@ -407,19 +646,16 @@
       clearTimeout(searchTimer);
       const firstRow = searchEl.querySelector(".channel-row");
       if (firstRow) {
-        // Search results visible — load the first one
         firstRow.dispatchEvent(new MouseEvent("mousedown"));
       } else {
-        // No results showing — only submit if it looks like a URL or slug
         const val = input.value.trim();
-        const looksLikeUrl = val.includes("are.na/") || val.includes("http");
+        const looksLikeUrl  = val.includes("are.na/") || val.includes("http");
         const looksLikeSlug = /^[a-z0-9][a-z0-9-]*$/i.test(val);
         if (looksLikeUrl || looksLikeSlug) {
           hideSearch();
           setRecentOpen(false);
           submit();
         }
-        // Otherwise (plain keyword with no results) — do nothing
       }
     } else if (e.key === "Escape") {
       hideSearch();
@@ -443,9 +679,9 @@
 
   async function runSearch(q) {
     try {
-      const res  = await fetch(`${API}/search/channels?q=${encodeURIComponent(q)}&per=20`);
+      const res  = await authFetch(`${API_V2}/search/channels?q=${encodeURIComponent(q)}&per=20`);
       const data = await res.json();
-      const raw = Array.isArray(data.channels) ? data.channels : (data.channels?.results || []);
+      const raw  = Array.isArray(data.channels) ? data.channels : (data.channels?.results || []);
       const channels = raw.slice().sort((a, b) => (b.length ?? 0) - (a.length ?? 0));
       if (!channels.length) { hideSearch(); return; }
 
@@ -476,10 +712,8 @@
   // ── URL parsing ───────────────────────────────────────────
   function parseSlug(raw) {
     raw = raw.trim();
-    // are.na/username/channel-slug
     const m = raw.match(/are\.na\/[^\/\?#]+\/([^\/\?#]+)/);
     if (m && m[1] !== "channels" && m[1] !== "following" && m[1] !== "followers") return m[1];
-    // Plain slug
     if (/^[a-z0-9][a-z0-9-]*$/i.test(raw)) return raw;
     return null;
   }
@@ -500,13 +734,14 @@
     placedIds.clear();
     gridEl.innerHTML = "";
     updateByline();
+    updateSurprise();
 
     hideAll();
     showLoading();
     input.disabled = true;
 
     try {
-      const res  = await fetch(`${API}/channels/${s}?per=${PER}&page=1`);
+      const res  = await authFetch(`${API_V2}/channels/${s}?per=${PER}&page=1`);
       if (!res.ok) throw new Error(res.status === 404 ? "Channel not found." : `Error ${res.status}.`);
 
       const data   = await res.json();
@@ -533,6 +768,7 @@
       showError(err.message);
       slug = "";
       updateByline();
+      updateSurprise();
     }
 
     input.disabled = false;
@@ -544,7 +780,7 @@
     loadingMore = true;
     page++;
     try {
-      const res  = await fetch(`${API}/channels/${slug}/contents?per=${PER}&page=${page}`);
+      const res  = await authFetch(`${API_V2}/channels/${slug}/contents?per=${PER}&page=${page}`);
       const data = await res.json();
       const imgs = filterImages(data.contents);
       images     = images.concat(imgs);
@@ -596,7 +832,7 @@
     const mbBtn = document.createElement("button");
     mbBtn.className = "moodboard-btn";
     mbBtn.title     = "Find similar";
-    mbBtn.innerHTML = `<svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.1555 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>`;
+    mbBtn.innerHTML = `<svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.467 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>`;
     mbBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       generateMoodboard(block, mbBtn);
@@ -619,9 +855,7 @@
     gridEl.appendChild(frag);
   }
 
-  // ── Moodboard generation ──────────────────────────────────
-  let generatingMoodboard = false;
-
+  // ── Moodboard (Find similar) ──────────────────────────────
   async function generateMoodboard(seedBlock, btn) {
     if (generatingMoodboard) return;
     generatingMoodboard = true;
@@ -631,9 +865,8 @@
     countEl.textContent = "Building moodboard…";
 
     try {
-      // Get the seed image info
-      const orig = seedBlock.image.original;
-      const disp = seedBlock.image.display || {};
+      const orig    = seedBlock.image.original;
+      const disp    = seedBlock.image.display || {};
       const seedImg = {
         url:    orig.url,
         width:  orig.width  || disp.width  || 800,
@@ -641,22 +874,21 @@
         title:  seedBlock.title || "Are.na image",
       };
 
-      // Fetch block data — `channels` lists channels this block appears in (co-occurrence)
-      const blockRes  = await fetch(`${API}/blocks/${seedBlock.id}`);
+      // Fetch block data — auth token may unlock `channels` co-occurrence field
+      const blockRes  = await authFetch(`${API_V2}/blocks/${seedBlock.id}`);
       const blockData = await blockRes.json();
       console.log("[asterism] block keys:", Object.keys(blockData).join(", "));
       console.log("[asterism] block channels:", JSON.stringify((blockData.channels || blockData.connections)?.slice(0,3)));
       const connections = (blockData.channels || blockData.connections || []).slice(0, 8);
 
-      // Fetch images from each connected channel
-      const seen = new Set([orig.url]);
+      const seen      = new Set([orig.url]);
       const allImages = [seedImg];
 
       await Promise.all(connections.map(async (ch) => {
         try {
           const chSlug = ch.slug || ch.id;
           if (!chSlug) return;
-          const res  = await fetch(`${API}/channels/${chSlug}?per=20&page=1`);
+          const res  = await authFetch(`${API_V2}/channels/${chSlug}?per=20&page=1`);
           const data = await res.json();
           const imgs = filterImages(data.contents);
           for (const b of imgs) {
@@ -674,11 +906,7 @@
       }));
 
       parent.postMessage({
-        pluginMessage: {
-          type:   "generate-moodboard",
-          title:  seedBlock.title || "",
-          images: allImages,
-        }
+        pluginMessage: { type: "generate-moodboard", title: seedBlock.title || "", images: allImages }
       }, "*");
 
     } catch (err) {
@@ -686,6 +914,75 @@
       showError("Moodboard failed: " + err.message);
       btn.disabled = false;
       generatingMoodboard = false;
+    }
+  }
+
+  // ── Surprise me ───────────────────────────────────────────
+  async function runSurpriseMe() {
+    if (surpriseRunning || !token) return;
+    surpriseRunning = true;
+    surpriseBtnEl.disabled = true;
+    surpriseBtnEl.textContent = "Gathering…";
+
+    try {
+      // Fetch user's channels
+      const res = await authFetch(`${API_V3}/me/channels?per=100`);
+      if (!res.ok) throw new Error("Couldn't fetch your channels.");
+      const data = await res.json();
+
+      const allChannels = (data.channels || []).filter((ch) => (ch.length || 0) > 0);
+      if (!allChannels.length) throw new Error("No channels with content found.");
+
+      // Randomly pick 3–5 channels
+      const shuffledCh = allChannels.slice().sort(() => Math.random() - 0.5);
+      const picked     = shuffledCh.slice(0, Math.min(5, shuffledCh.length));
+
+      const seen      = new Set();
+      const allImages = [];
+
+      surpriseBtnEl.textContent = "Building…";
+
+      await Promise.all(picked.map(async (ch) => {
+        try {
+          // Land on a random page of the channel
+          const totalCh = ch.length || 1;
+          const maxPage = Math.max(1, Math.ceil(totalCh / 20));
+          const pg      = Math.ceil(Math.random() * maxPage);
+          const r       = await authFetch(`${API_V2}/channels/${ch.slug}/contents?per=20&page=${pg}`);
+          const d       = await r.json();
+          const imgs    = filterImages(d.contents || []);
+
+          // Shuffle and take up to 4 from this channel
+          const shuffledImgs = imgs.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+          for (const b of shuffledImgs) {
+            if (seen.has(b.image.original.url)) continue;
+            seen.add(b.image.original.url);
+            const orig = b.image.original;
+            const disp = b.image.display || {};
+            allImages.push({
+              url:    orig.url,
+              width:  orig.width  || disp.width  || 800,
+              height: orig.height || disp.height || 600,
+              title:  b.title || ch.title || "Image",
+            });
+          }
+        } catch (_) {}
+      }));
+
+      if (!allImages.length) throw new Error("No images found in your channels.");
+
+      // Final shuffle and cap at 16
+      const final = allImages.slice().sort(() => Math.random() - 0.5).slice(0, 16);
+
+      parent.postMessage({
+        pluginMessage: { type: "generate-moodboard", title: "Surprise", images: final }
+      }, "*");
+
+    } catch (err) {
+      surpriseRunning = false;
+      surpriseBtnEl.disabled = false;
+      surpriseBtnEl.textContent = "✦ Surprise me";
+      showError("Surprise failed: " + err.message);
     }
   }
 
@@ -703,6 +1000,23 @@
         recents = msg.recents;
         break;
 
+      case "token-loaded":
+        if (msg.token) {
+          // Verify silently on startup
+          fetch(API_V3 + "/me", { headers: { "Authorization": "Bearer " + msg.token } })
+            .then((r) => r.ok ? r.json() : null)
+            .then((user) => {
+              if (user) {
+                token = msg.token;
+                connectedUser = { slug: user.slug || user.username || "you" };
+              }
+              updateSurprise();
+              updateAccountBtn();
+            })
+            .catch(() => { updateSurprise(); updateAccountBtn(); });
+        }
+        break;
+
       case "place-success": {
         placedIds.add(msg.id);
         const item = gridEl.querySelector(`[data-id="${msg.id}"]`);
@@ -711,21 +1025,27 @@
       }
 
       case "place-error": {
-        const item = gridEl.querySelector(`[data-id="${msg.id}"]`);
-        if (item) item.classList.remove("placing");
+        const item2 = gridEl.querySelector(`[data-id="${msg.id}"]`);
+        if (item2) item2.classList.remove("placing");
         break;
       }
 
       case "moodboard-success":
         generatingMoodboard = false;
+        surpriseRunning     = false;
+        surpriseBtnEl.disabled = false;
+        surpriseBtnEl.textContent = "✦ Surprise me";
         countEl.textContent = `${images.length} images`;
-        document.querySelectorAll(".moodboard-btn").forEach(b => b.disabled = false);
+        document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
         break;
 
       case "moodboard-error":
         generatingMoodboard = false;
+        surpriseRunning     = false;
+        surpriseBtnEl.disabled = false;
+        surpriseBtnEl.textContent = "✦ Surprise me";
         countEl.textContent = `${images.length} images`;
-        document.querySelectorAll(".moodboard-btn").forEach(b => b.disabled = false);
+        document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
         showError("Moodboard failed: " + msg.error);
         break;
     }
@@ -733,6 +1053,8 @@
 
   // ── Init ──────────────────────────────────────────────────
   updateByline();
+  updateSurprise();
+  updateAccountBtn();
 </script>
 </body>
 </html>
