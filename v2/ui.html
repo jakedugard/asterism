@@ -645,7 +645,7 @@
       if (!res.ok) throw new Error("Invalid token — check and try again.");
       const user = await res.json();
       token = raw;
-      connectedUser = { slug: user.slug || user.username || "you" };
+      connectedUser = { slug: user.slug || user.username || "you", id: user.id };
       parent.postMessage({ pluginMessage: { type: "save-token", token: token } }, "*");
       showSettingsConnected();
       loadSettingsGrid();
@@ -959,7 +959,10 @@
 
       if (connectedUser?.slug) {
         try {
-          const chRes = await authFetch(`${API_V2}/users/${connectedUser.slug}/channels?per=100`);
+          // Try numeric ID first, fall back to slug; append auth_token for v2 compatibility
+          const userKey  = connectedUser.id || connectedUser.slug;
+          const tokenQS  = token ? `&auth_token=${encodeURIComponent(token)}` : "";
+          const chRes    = await authFetch(`${API_V2}/users/${userKey}/channels?per=100${tokenQS}`);
           if (chRes.ok) {
             const chData = await chRes.json();
             const raw = chData.channels || chData || [];
@@ -1018,10 +1021,12 @@
     try {
       let channelPool = [];
 
-      // Use slug from token verification → /v2/users/{slug}/channels
+      // Use ID (preferred) or slug from token verification
       if (connectedUser?.slug) {
         try {
-          const chRes = await authFetch(`${API_V2}/users/${connectedUser.slug}/channels?per=100`);
+          const userKey = connectedUser.id || connectedUser.slug;
+          const tokenQS = token ? `&auth_token=${encodeURIComponent(token)}` : "";
+          const chRes   = await authFetch(`${API_V2}/users/${userKey}/channels?per=100${tokenQS}`);
           if (chRes.ok) {
             const chData = await chRes.json();
             const raw = chData.channels || chData || [];
@@ -1111,7 +1116,7 @@
             .then((user) => {
               if (user) {
                 token = msg.token;
-                connectedUser = { slug: user.slug || user.username || "you" };
+                connectedUser = { slug: user.slug || user.username || "you", id: user.id };
               }
               updateSurprise();
               updateAccountBtn();
