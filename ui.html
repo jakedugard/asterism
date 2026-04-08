@@ -172,6 +172,14 @@
   }
   .grid-item.placed img { opacity: 0.25; }
 
+  .grid-item.selected::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.15);
+    pointer-events: none;
+  }
+  .grid-item.selected img { opacity: 0.6; }
+
   .scroll-sentinel { height: 1px; }
 
   /* ── Recent panel ── */
@@ -316,6 +324,22 @@
   }
   .remove-btn:hover { color: #e85050; }
 
+  /* ── Drop selection button ── */
+  .drop-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid #333;
+    color: #b2b2b2;
+    font-size: 11px;
+    font-family: inherit;
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .drop-btn:hover { border-color: #888; color: #eee; }
+
   /* ── Surprise button (Saved panel footer) ── */
   .surprise-btn {
     background: none;
@@ -384,6 +408,7 @@
 <div class="channel-info"  id="channel-info">
   <span class="channel-title" id="channel-title"></span>
   <span class="channel-count" id="channel-count"></span>
+  <button class="drop-btn" id="drop-btn" onclick="dropSelection()" style="display:none">Drop <span id="drop-count">0</span></button>
 </div>
 
 <a id="byline" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
@@ -426,6 +451,16 @@
   const API = "https://api.are.na/v2";
   const PER = 30;
 
+  // ── Random frame names ────────────────────────────────────
+  const ADJS  = ["amber","ashen","bare","borrowed","broken","calm","copper","dark","dim","distant","dull","empty","faint","felt","flat","forgotten","frozen","gentle","gilt","hollow","hush","idle","ivory","lacquer","lean","light","linen","loose","lunar","matte","mild","muted","narrow","pale","paper","quiet","raw","rough","salt","silver","slow","soft","spare","still","stone","tender","thin","tired","void","warm","worn"];
+  const NOUNS = ["archive","atlas","bloom","coast","current","document","draft","drift","dusk","echo","edge","field","film","fold","ghost","grain","ground","harbor","haze","hour","index","inlet","interval","lacquer","layer","margin","mist","motion","nerve","note","object","passage","patch","pause","plain","pool","proof","record","relic","remnant","render","residue","return","reverie","ridge","signal","sketch","static","study","surface","tide","trace","vessel","weight","window"];
+
+  function randomFrameName() {
+    const adj  = ADJS[Math.floor(Math.random() * ADJS.length)];
+    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    return adj + " " + noun;
+  }
+
   // ── State ─────────────────────────────────────────────────
   let slug            = "";
   let page            = 1;
@@ -437,8 +472,9 @@
   let savedOpen       = false;
   let recents         = [];
   let savedChannels   = [];
-  let surpriseRunning = false;
+  let surpriseRunning     = false;
   let generatingMoodboard = false;
+  let selectedBlocks      = [];   // multi-select state
 
   // ── DOM refs ──────────────────────────────────────────────
   const input         = document.getElementById("url-input");
@@ -463,6 +499,8 @@
   const surpriseBtnEl = document.getElementById("surprise-btn");
   const surpriseLabel = document.getElementById("surprise-label");
   const byline        = document.getElementById("byline");
+  const dropBtnEl     = document.getElementById("drop-btn");
+  const dropCountEl   = document.getElementById("drop-count");
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(
@@ -492,12 +530,30 @@
     surpriseBtnEl.disabled = savedChannels.length === 0;
   }
 
+  function updateDropBtn() {
+    const n = selectedBlocks.length;
+    if (n >= 2) {
+      dropCountEl.textContent = n;
+      dropBtnEl.style.display = "";
+    } else {
+      dropBtnEl.style.display = "none";
+      if (n === 0) selectedBlocks = [];
+    }
+  }
+
+  function clearSelection() {
+    selectedBlocks = [];
+    document.querySelectorAll(".grid-item.selected").forEach((el) => el.classList.remove("selected"));
+    dropBtnEl.style.display = "none";
+  }
+
   // ── Reset ─────────────────────────────────────────────────
   function resetPlugin() {
     slug = ""; page = 1; totalPages = 1; images = [];
     placedIds.clear();
     input.value = "";
     gridEl.innerHTML = "";
+    clearSelection();
     hideAll(); hideError(); hideSearch();
     recentOpen = false; savedOpen = false;
     recentBtn.classList.remove("active");
@@ -695,7 +751,7 @@
 
       const final = allImages.slice().sort(() => Math.random() - 0.5).slice(0, 16);
       parent.postMessage({
-        pluginMessage: { type: "generate-moodboard", title: "Surprise", images: final }
+        pluginMessage: { type: "generate-moodboard", title: randomFrameName(), images: final }
       }, "*");
 
     } catch (err) {
@@ -792,6 +848,7 @@
     hideError();
     slug = s; page = 1; images = [];
     placedIds.clear();
+    clearSelection();
     gridEl.innerHTML = "";
     updateByline();
     updateSurpriseBtn();
@@ -869,8 +926,26 @@
     img.onerror = () => { item.style.display = "none"; };
     item.appendChild(img);
 
-    item.addEventListener("click", () => {
+    item.addEventListener("click", (e) => {
       if (item.classList.contains("placing")) return;
+
+      if (e.shiftKey) {
+        // Toggle selection
+        const idx = selectedBlocks.findIndex((b) => b.id === block.id);
+        if (idx > -1) {
+          selectedBlocks.splice(idx, 1);
+          item.classList.remove("selected");
+        } else {
+          selectedBlocks.push(block);
+          item.classList.add("selected");
+        }
+        updateDropBtn();
+        return;
+      }
+
+      // If there's a selection, clear it and fall through to single place
+      if (selectedBlocks.length) { clearSelection(); }
+
       item.classList.add("placing");
       const orig  = block.image.original;
       const disp  = block.image.display || {};
@@ -906,6 +981,29 @@
     const frag = document.createDocumentFragment();
     blocks.forEach((b) => frag.appendChild(makeItem(b)));
     gridEl.appendChild(frag);
+  }
+
+  // ── Drop selection ────────────────────────────────────────
+  function dropSelection() {
+    if (selectedBlocks.length < 2 || generatingMoodboard) return;
+    generatingMoodboard = true;
+    dropBtnEl.disabled = true;
+
+    const images = selectedBlocks.map((block) => {
+      const orig = block.image.original;
+      const disp = block.image.display || {};
+      const imgEl = gridEl.querySelector(`[data-id="${block.id}"] img`);
+      return {
+        url:    orig.url,
+        width:  orig.width  || disp.width  || imgEl?.naturalWidth  || 800,
+        height: orig.height || disp.height || imgEl?.naturalHeight || 600,
+        title:  block.title || "Image",
+      };
+    });
+
+    parent.postMessage({
+      pluginMessage: { type: "generate-moodboard", title: randomFrameName(), images }
+    }, "*");
   }
 
   // ── Moodboard (Find similar) ──────────────────────────────
@@ -956,7 +1054,7 @@
       }));
 
       parent.postMessage({
-        pluginMessage: { type: "generate-moodboard", title: seedBlock.title || "", images: allImages }
+        pluginMessage: { type: "generate-moodboard", title: randomFrameName(), images: allImages }
       }, "*");
 
     } catch (err) {
@@ -1000,18 +1098,21 @@
       }
 
       case "moodboard-success":
-        generatingMoodboard = false;
-        surpriseRunning     = false;
+        generatingMoodboard    = false;
+        surpriseRunning        = false;
         surpriseBtnEl.disabled = false;
+        dropBtnEl.disabled     = false;
         surpriseLabel.textContent = "Surprise me";
         countEl.textContent = `${images.length} images`;
+        clearSelection();
         document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
         break;
 
       case "moodboard-error":
-        generatingMoodboard = false;
-        surpriseRunning     = false;
+        generatingMoodboard    = false;
+        surpriseRunning        = false;
         surpriseBtnEl.disabled = false;
+        dropBtnEl.disabled     = false;
         surpriseLabel.textContent = "Surprise me";
         countEl.textContent = `${images.length} images`;
         document.querySelectorAll(".moodboard-btn").forEach((b) => b.disabled = false);
