@@ -90,7 +90,7 @@ Asterism cuts that out.
 
 ## Release Notes
 
-### v1.2 — Saved channels + Surprise me (2026-04-08)
+### v1.1 — Saved channels + Surprise me (2026-04-08)
 
 - **Saved tab** — save any channel by URL or slug; persists across sessions
 - **Surprise me** — generates a 4×4 moodboard by randomly sampling your saved channels
