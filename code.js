@@ -82,7 +82,7 @@ figma.ui.onmessage = async (msg) => {
 
       const frameW = COLS * COL_W + (COLS - 1) * GAP + GAP * 2;
       const frame  = figma.createFrame();
-      frame.name   = msg.title ? `Moodboard — ${msg.title}` : "Asterism Moodboard";
+      frame.name   = msg.title || "asterism";
       frame.fills  = [];
       frame.clipsContent            = false;
       frame.layoutMode              = "HORIZONTAL";
