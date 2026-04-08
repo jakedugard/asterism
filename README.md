@@ -6,7 +6,7 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ---
 
-## Features
+### Features
 
 - Search Are.na channels by keyword or paste a channel URL
 - Browse images in a grid with infinite scroll
@@ -18,7 +18,7 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ---
 
-## Install
+### Install
 
 1. **[Download ZIP](https://github.com/jakedugard/asterism/archive/refs/heads/main.zip)** and unzip
 2. Open the **Figma desktop app**
@@ -29,15 +29,15 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ---
 
-## Release Notes
+### Release Notes
 
-### v1.1 — Saved channels + Surprise me (2026-04-08)
+**v1.1 — Saved channels + Surprise me (2026-04-08)**
 - Saved tab — save any channel by URL or slug, persists across sessions
 - Surprise me — 4×4 moodboard from a random sample of your saved channels
 - Find similar — co-occurrence moodboard from any image in a channel
 - Moodboard frames use auto layout with hugged height
 
-### v1.0 — Initial release
+**v1.0 — Initial release**
 - Search and browse public Are.na channels
 - Place images onto the Figma canvas
 - Recent channels panel with clear history
