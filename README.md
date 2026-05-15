@@ -42,7 +42,7 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 - Shift+click images to select, Drop button places them as an auto layout grid
 - All moodboard frames get a random adjective+noun name (e.g. *amber drift*, *pale archive*)
 
-**v1.1 — Saved channels + Surprise me**
+**v1.1 — Saved channels + Surprise me (2026-04-08)**
 - Saved tab — save any channel by URL or slug, persists across sessions
 - Surprise me — 4×4 moodboard from a random sample of your saved channels
 - Find similar — co-occurrence moodboard from any image in a channel
