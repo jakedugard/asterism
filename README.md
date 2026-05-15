@@ -34,9 +34,10 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ### Release Notes
 
-**v1.3.1 — Resize stability (2026-05-15)**
+**v1.3.1 — Resize stability + chronological order (2026-05-15)**
 - Fixed a bug where the resize handle could "follow" the cursor after a drag
 - Plugin window now opens at the default size every session instead of persisting
+- Channel images are shown in reverse chronological order — most recently added at the top
 
 **v1.3 — Resizable window + grid density (2026-05-15)**
 - Drag the bottom-right corner to resize the plugin window

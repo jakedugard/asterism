@@ -1077,7 +1077,13 @@
   // ── Grid ──────────────────────────────────────────────────
   function filterImages(contents) {
     if (!Array.isArray(contents)) return [];
-    return contents.filter((b) => b.class === "Image" && b.image?.original?.url);
+    return contents
+      .filter((b) => b.class === "Image" && b.image?.original?.url)
+      .sort((a, b) => {
+        const aT = new Date(a.connected_at || a.created_at || 0).getTime();
+        const bT = new Date(b.connected_at || b.created_at || 0).getTime();
+        return bT - aT;
+      });
   }
 
   function makeItem(block) {
