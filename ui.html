@@ -68,6 +68,21 @@
   .nav-btn:hover { color: #b2b2b2; }
   .nav-btn.active { color: #eee; }
 
+  /* ── Density toggle ── */
+  .density-btn {
+    flex-shrink: 0;
+    margin-left: 14px;
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .density-btn svg rect { fill: #888; transition: fill 0.15s; }
+  .density-btn:hover svg rect { fill: #eee; }
+
   /* ── Search results dropdown ── */
   .channel-list { flex-shrink: 0; display: none; max-height: calc(100vh - 44px); overflow-y: auto; scrollbar-width: none; }
   .channel-list::-webkit-scrollbar { display: none; }
@@ -128,6 +143,11 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
+  .grid.density-1 { grid-template-columns: repeat(1, 1fr); gap: 12px; }
+  .grid.density-2 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .grid.density-3 { grid-template-columns: repeat(3, 1fr); gap: 8px;  }
+  .grid.density-4 { grid-template-columns: repeat(4, 1fr); gap: 7px;  }
+  .grid.density-5 { grid-template-columns: repeat(5, 1fr); gap: 6px;  }
 
   .grid-item {
     position: relative;
@@ -390,6 +410,43 @@
     transition: color 0.15s;
   }
   #byline:hover { color: #b2b2b2; }
+
+  /* ── Resize handle ── */
+  .resize-handle {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    cursor: nwse-resize;
+    z-index: 100;
+    touch-action: none;
+    color: #b2b2b2;
+  }
+  .resize-handle svg {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    display: block;
+    opacity: 0.3;
+    transition: opacity 0.15s ease-out;
+    pointer-events: none;
+  }
+  .resize-handle:hover svg,
+  .resize-handle.dragging svg { opacity: 1; }
+
+  /* Mask a 1px subpixel artifact at the iframe's bottom edge */
+  body::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: #000;
+    z-index: 50;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -398,7 +455,10 @@
   <div class="header-logo" onclick="resetPlugin()">
     <svg width="14" height="14" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M75.8216 47.4384C76.1029 46.4526 77.5001 46.4526 77.7814 47.4384L82.1301 62.6763C82.281 63.2051 82.8243 63.5188 83.3578 63.3851L98.7285 59.5322C99.723 59.283 100.422 60.4929 99.7085 61.2295L88.6864 72.6145C88.3039 73.0096 88.3039 73.637 88.6864 74.0321L99.7085 85.4172C100.422 86.1537 99.723 87.3637 98.7285 87.1144L83.3578 83.2616C82.8243 83.1278 82.281 83.4415 82.1301 83.9704L77.7814 99.2082C77.5001 100.194 76.1029 100.194 75.8216 99.2082L71.4729 83.9704C71.322 83.4415 70.7787 83.1278 70.2452 83.2616L54.8745 87.1144C53.88 87.3637 53.1815 86.1537 53.8946 85.4172L64.9166 74.0321C65.2991 73.637 65.2991 73.0096 64.9166 72.6145L53.8946 61.2295C53.1815 60.4929 53.88 59.283 54.8745 59.5322L70.2452 63.3851C70.7787 63.5188 71.322 63.2051 71.4729 62.6763L75.8216 47.4384Z" fill="white"/><path d="M22.2186 47.4384C22.4999 46.4526 23.8971 46.4526 24.1784 47.4384L28.5271 62.6763C28.678 63.2051 29.2213 63.5188 29.7548 63.3851L45.1255 59.5322C46.12 59.283 46.8185 60.4929 46.1054 61.2295L35.0834 72.6145C34.7009 73.0096 34.7009 73.637 35.0834 74.0321L46.1054 85.4172C46.8185 86.1537 46.12 87.3637 45.1255 87.1144L29.7548 83.2616C29.2213 83.1278 28.678 83.4415 28.5271 83.9704L24.1784 99.2082C23.8971 100.194 22.4999 100.194 22.2186 99.2082L17.8699 83.9704C17.719 83.4415 17.1756 83.1278 16.6422 83.2616L1.27145 87.1144C0.277013 87.3637 -0.421555 86.1537 0.291539 85.4172L11.3136 74.0321C11.6961 73.637 11.6961 73.0096 11.3136 72.6145L0.291538 61.2295C-0.421555 60.4929 0.277013 59.283 1.27145 59.5322L16.6422 63.3851C17.1756 63.5188 17.719 63.2051 17.8699 62.6763L22.2186 47.4384Z" fill="white"/><path d="M49.0201 0.739384C49.3014 -0.246462 50.6986 -0.246461 50.9799 0.739384L55.3286 15.9773C55.4795 16.5061 56.0228 16.8198 56.5563 16.6861L71.927 12.8332C72.9215 12.5839 73.62 13.7939 72.907 14.5305L61.8849 25.9155C61.5024 26.3106 61.5024 26.938 61.8849 27.3331L72.907 38.7181C73.62 39.4547 72.9215 40.6647 71.927 40.4154L56.5563 36.5625C56.0228 36.4288 55.4795 36.7425 55.3286 37.2713L50.9799 52.5092C50.6986 53.4951 49.3014 53.4951 49.0201 52.5092L44.6714 37.2713C44.5205 36.7425 43.9772 36.4288 43.4437 36.5625L28.073 40.4154C27.0785 40.6647 26.38 39.4547 27.093 38.7181L38.1151 27.3331C38.4976 26.938 38.4976 26.3106 38.1151 25.9155L27.093 14.5305C26.38 13.7939 27.0785 12.5839 28.073 12.8332L43.4437 16.6861C43.9772 16.8198 44.5205 16.5061 44.6714 15.9773L49.0201 0.739384Z" fill="white"/></svg>
   </div>
-  <input type="text" id="url-input" placeholder="Search or paste a public Are.na channel URL." />
+  <input type="text" id="url-input" placeholder="Search" />
+  <button class="density-btn" id="density-btn" onclick="cycleDensity()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" id="density-icon"></svg>
+  </button>
   <button class="nav-btn" id="recent-btn" onclick="toggleRecent()">Recent</button>
   <button class="nav-btn" id="saved-btn"  onclick="toggleSaved()">Saved</button>
 </div>
@@ -412,6 +472,12 @@
 </div>
 
 <a id="byline" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
+
+<div class="resize-handle" id="resize-handle" title="Drag to resize">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="2" y1="12" x2="12" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+</div>
 
 <div id="content-area">
   <div class="loading" id="loading">Loading…</div>
@@ -442,7 +508,7 @@
 
   <!-- Image grid -->
   <div class="grid-container" id="grid-container">
-    <div class="grid" id="grid"></div>
+    <div class="grid density-3" id="grid"></div>
     <div class="scroll-sentinel" id="scroll-sentinel"></div>
   </div>
 </div>
@@ -501,6 +567,91 @@
   const byline        = document.getElementById("byline");
   const dropBtnEl     = document.getElementById("drop-btn");
   const dropCountEl   = document.getElementById("drop-count");
+  const resizeHandle  = document.getElementById("resize-handle");
+  const densityBtn    = document.getElementById("density-btn");
+  const densityIcon   = document.getElementById("density-icon");
+
+  // ── Density ───────────────────────────────────────────────
+  const DENSITIES = ["1", "2", "3", "4", "5"];
+  // All icons share a 1px gap between bars, centered within the 14×14 viewBox.
+  const DENSITY_ICONS = {
+    "1": '<rect x="2" y="2" width="10" height="10"/>',
+    "2": '<rect x="1.5" y="2" width="5" height="10"/><rect x="7.5" y="2" width="5" height="10"/>',
+    "3": '<rect x="1.5" y="2" width="3" height="10"/><rect x="5.5" y="2" width="3" height="10"/><rect x="9.5" y="2" width="3" height="10"/>',
+    "4": '<rect x="1.5" y="2" width="2" height="10"/><rect x="4.5" y="2" width="2" height="10"/><rect x="7.5" y="2" width="2" height="10"/><rect x="10.5" y="2" width="2" height="10"/>',
+    "5": '<rect x="1.5" y="2" width="1.4" height="10"/><rect x="3.9" y="2" width="1.4" height="10"/><rect x="6.3" y="2" width="1.4" height="10"/><rect x="8.7" y="2" width="1.4" height="10"/><rect x="11.1" y="2" width="1.4" height="10"/>',
+  };
+  // Migrate legacy keys from earlier versions
+  const LEGACY_DENSITY = { compact: "2", default: "3", comfortable: "5" };
+  let currentDensity = "3";
+
+  function applyDensity(d) {
+    if (LEGACY_DENSITY[d]) d = LEGACY_DENSITY[d];
+    if (!DENSITIES.includes(d)) d = "3";
+    currentDensity = d;
+    gridEl.classList.remove("density-1", "density-2", "density-3", "density-4", "density-5");
+    gridEl.classList.add("density-" + d);
+    densityIcon.innerHTML = DENSITY_ICONS[d];
+    densityBtn.title = "Grid: " + d + (d === "1" ? " column" : " columns") + " — click or scroll to change";
+  }
+
+  function setDensity(d) {
+    applyDensity(d);
+    parent.postMessage({ pluginMessage: { type: "save-density", density: d } }, "*");
+  }
+
+  function cycleDensity() {
+    const i = DENSITIES.indexOf(currentDensity);
+    setDensity(DENSITIES[(i + 1) % DENSITIES.length]);
+  }
+
+  // Scroll-wheel on the icon steps through densities (clamped at ends)
+  let lastWheelTime = 0;
+  densityBtn.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const now = performance.now();
+    if (now - lastWheelTime < 80) return;
+    lastWheelTime = now;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const i = DENSITIES.indexOf(currentDensity);
+    const next = Math.max(0, Math.min(DENSITIES.length - 1, i + dir));
+    if (next !== i) setDensity(DENSITIES[next]);
+  }, { passive: false });
+
+  // ── Window resize ─────────────────────────────────────────
+  const MIN_W = 320;
+  const MIN_H = 400;
+  let resizing = false;
+  let startX = 0, startY = 0, startW = 0, startH = 0, curW = 0, curH = 0;
+
+  resizeHandle.addEventListener("pointerdown", (e) => {
+    resizing = true;
+    startX = e.screenX;
+    startY = e.screenY;
+    startW = window.innerWidth;
+    startH = window.innerHeight;
+    curW = startW; curH = startH;
+    resizeHandle.classList.add("dragging");
+    resizeHandle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  resizeHandle.addEventListener("pointermove", (e) => {
+    if (!resizing) return;
+    curW = Math.max(MIN_W, startW + (e.screenX - startX));
+    curH = Math.max(MIN_H, startH + (e.screenY - startY));
+    parent.postMessage({ pluginMessage: { type: "resize", width: curW, height: curH } }, "*");
+  });
+
+  function endResize(e) {
+    if (!resizing) return;
+    resizing = false;
+    resizeHandle.classList.remove("dragging");
+    try { resizeHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+    parent.postMessage({ pluginMessage: { type: "resize-end", width: curW, height: curH } }, "*");
+  }
+  resizeHandle.addEventListener("pointerup", endResize);
+  resizeHandle.addEventListener("pointercancel", endResize);
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(
@@ -524,6 +675,10 @@
 
   function updateByline() {
     byline.style.display = (!slug && !recentOpen && !savedOpen) ? "" : "none";
+  }
+
+  function updateDensityBtn() {
+    densityBtn.style.display = (gridWrap.style.display === "block") ? "" : "none";
   }
 
   function updateSurpriseBtn() {
@@ -559,6 +714,7 @@
     recentBtn.classList.remove("active");
     savedBtn.classList.remove("active");
     updateByline();
+    updateDensityBtn();
     updateSurpriseBtn();
   }
 
@@ -579,6 +735,7 @@
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
     updateByline();
+    updateDensityBtn();
     updateSurpriseBtn();
   }
 
@@ -631,6 +788,7 @@
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
     updateByline();
+    updateDensityBtn();
     updateSurpriseBtn();
   }
 
@@ -851,6 +1009,7 @@
     clearSelection();
     gridEl.innerHTML = "";
     updateByline();
+    updateDensityBtn();
     updateSurpriseBtn();
 
     hideAll();
@@ -875,6 +1034,7 @@
       renderGrid();
       hideLoading();
       gridWrap.style.display = "block";
+      updateDensityBtn();
 
       parent.postMessage({ pluginMessage: { type: "save-recent", slug: s, title, owner, imageCount: imgs.length } }, "*");
 
@@ -885,6 +1045,7 @@
       showError(err.message);
       slug = "";
       updateByline();
+      updateDensityBtn();
       updateSurpriseBtn();
     }
 
@@ -1084,6 +1245,10 @@
         updateSurpriseBtn();
         break;
 
+      case "density-loaded":
+        applyDensity(msg.density || "default");
+        break;
+
       case "place-success": {
         placedIds.add(msg.id);
         const item = gridEl.querySelector(`[data-id="${msg.id}"]`);
@@ -1122,7 +1287,9 @@
   };
 
   // ── Init ──────────────────────────────────────────────────
+  applyDensity("3");
   updateByline();
+  updateDensityBtn();
   updateSurpriseBtn();
 </script>
 </body>
