@@ -3,19 +3,14 @@ const DEFAULT_HEIGHT = 600;
 const MIN_WIDTH      = 320;
 const MIN_HEIGHT     = 400;
 
+figma.showUI(__html__, { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, themeColors: false });
+
 (async () => {
-  const [savedSize, recents, channels, density] = await Promise.all([
-    figma.clientStorage.getAsync("arena-window-size"),
+  const [recents, channels, density] = await Promise.all([
     figma.clientStorage.getAsync("arena-recents"),
     figma.clientStorage.getAsync("arena-saved-channels"),
     figma.clientStorage.getAsync("arena-density"),
   ]);
-
-  const startW = Math.max(MIN_WIDTH,  (savedSize && savedSize.width)  || DEFAULT_WIDTH);
-  const startH = Math.max(MIN_HEIGHT, (savedSize && savedSize.height) || DEFAULT_HEIGHT);
-
-  figma.showUI(__html__, { width: startW, height: startH, themeColors: false });
-
   figma.ui.postMessage({ type: "recents-loaded", recents: recents || [] });
   figma.ui.postMessage({ type: "saved-loaded",   channels: channels || [] });
   figma.ui.postMessage({ type: "density-loaded", density: density || "3" });
@@ -23,14 +18,12 @@ const MIN_HEIGHT     = 400;
 
 figma.ui.onmessage = async (msg) => {
 
-  // ── Window resize ─────────────────────────────────────────
-  if (msg.type === "resize" || msg.type === "resize-end") {
-    const w = Math.max(MIN_WIDTH,  Math.round(msg.width));
-    const h = Math.max(MIN_HEIGHT, Math.round(msg.height));
-    figma.ui.resize(w, h);
-    if (msg.type === "resize-end") {
-      await figma.clientStorage.setAsync("arena-window-size", { width: w, height: h });
-    }
+  // ── Window resize (transient — not persisted) ─────────────
+  if (msg.type === "resize") {
+    figma.ui.resize(
+      Math.max(MIN_WIDTH,  Math.round(msg.width)),
+      Math.max(MIN_HEIGHT, Math.round(msg.height))
+    );
     return;
   }
 

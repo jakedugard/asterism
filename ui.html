@@ -619,39 +619,45 @@
   }, { passive: false });
 
   // ── Window resize ─────────────────────────────────────────
+  // Use mouse events on `window` (not pointer capture on the handle) — Figma's
+  // webview can drop pointer capture mid-drag when the iframe is resized, which
+  // would leave `resizing` stuck and cause the handle to follow the cursor
+  // afterwards. Window-level listeners plus a button-state check make sure the
+  // drag can always exit cleanly.
   const MIN_W = 320;
   const MIN_H = 400;
   let resizing = false;
-  let startX = 0, startY = 0, startW = 0, startH = 0, curW = 0, curH = 0;
+  let startX = 0, startY = 0, startW = 0, startH = 0;
 
-  resizeHandle.addEventListener("pointerdown", (e) => {
+  function endResize() {
+    if (!resizing) return;
+    resizing = false;
+    resizeHandle.classList.remove("dragging");
+  }
+
+  resizeHandle.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
     resizing = true;
     startX = e.screenX;
     startY = e.screenY;
     startW = window.innerWidth;
     startH = window.innerHeight;
-    curW = startW; curH = startH;
     resizeHandle.classList.add("dragging");
-    resizeHandle.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
 
-  resizeHandle.addEventListener("pointermove", (e) => {
+  window.addEventListener("mousemove", (e) => {
     if (!resizing) return;
-    curW = Math.max(MIN_W, startW + (e.screenX - startX));
-    curH = Math.max(MIN_H, startH + (e.screenY - startY));
-    parent.postMessage({ pluginMessage: { type: "resize", width: curW, height: curH } }, "*");
+    // Safety: if the left button isn't actually held anymore, bail out.
+    if (!(e.buttons & 1)) { endResize(); return; }
+    const w = Math.max(MIN_W, startW + (e.screenX - startX));
+    const h = Math.max(MIN_H, startH + (e.screenY - startY));
+    parent.postMessage({ pluginMessage: { type: "resize", width: w, height: h } }, "*");
   });
 
-  function endResize(e) {
-    if (!resizing) return;
-    resizing = false;
-    resizeHandle.classList.remove("dragging");
-    try { resizeHandle.releasePointerCapture(e.pointerId); } catch (_) {}
-    parent.postMessage({ pluginMessage: { type: "resize-end", width: curW, height: curH } }, "*");
-  }
-  resizeHandle.addEventListener("pointerup", endResize);
-  resizeHandle.addEventListener("pointercancel", endResize);
+  window.addEventListener("mouseup",    endResize);
+  window.addEventListener("blur",       endResize);
+  document.addEventListener("mouseleave", endResize);
 
   // ── Infinite scroll ───────────────────────────────────────
   new IntersectionObserver(

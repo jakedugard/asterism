@@ -16,7 +16,7 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 - **Surprise me** — generates a 4×4 moodboard by randomly sampling your saved channels
 - **Find similar ★** — hover any image for a co-occurrence moodboard from channels it appears in across Are.na
 - **Multi-select** — shift+click images then hit Drop to place them as a grid on canvas
-- **Resizable window** — drag the bottom-right corner; size persists across sessions
+- **Resizable window** — drag the bottom-right corner to fit your workspace
 - **Grid density** — cycle 1–5 columns from the toolbar (or scroll-wheel the icon); preference persists
 
 ---
@@ -34,8 +34,12 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ### Release Notes
 
+**v1.3.1 — Resize stability (2026-05-15)**
+- Fixed a bug where the resize handle could "follow" the cursor after a drag
+- Plugin window now opens at the default size every session instead of persisting
+
 **v1.3 — Resizable window + grid density (2026-05-15)**
-- Drag the bottom-right corner to resize the plugin window; size persists across sessions
+- Drag the bottom-right corner to resize the plugin window
 - Grid density toggle in the toolbar — cycle 1 / 2 / 3 / 4 / 5 columns, or scroll-wheel the icon to step
 
 **v1.2 — Multi-select + random frame names (2026-04-08)**
