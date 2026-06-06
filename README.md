@@ -34,6 +34,10 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 
 ### Release Notes
 
+**v1.4 — About page (2026-06-05)**
+- New About page — click "Info" at the bottom-left for plugin details
+- "Buy me a coffee" tip jar link for those who want to support the plugin
+
 **v1.3.1 — Resize stability + chronological order (2026-05-15)**
 - Fixed a bug where the resize handle could "follow" the cursor after a drag
 - Plugin window now opens at the default size every session instead of persisting

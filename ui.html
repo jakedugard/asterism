@@ -23,6 +23,9 @@
     align-items: center;
     padding: 0 12px;
     height: 44px;
+    position: relative;
+    z-index: 70;
+    background: #000;
   }
 
   .header-logo {
@@ -398,6 +401,64 @@
     overflow: hidden;
   }
 
+  /* ── About panel ── */
+  .about-container {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #000;
+    overflow-y: auto;
+    scrollbar-width: none;
+    z-index: 60;
+  }
+  .about-container::-webkit-scrollbar { display: none; }
+  .about-container.visible { display: flex; }
+
+  .about-logo { margin-bottom: 22px; }
+  .about-logo svg path { fill: #2a2a2a; }
+
+  .about-title {
+    color: #eee;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .about-version {
+    color: #555;
+    margin-bottom: 18px;
+  }
+  .about-tagline {
+    color: #b2b2b2;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    max-width: 280px;
+  }
+
+  .about-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .about-link {
+    width: 160px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+    color: #b2b2b2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .about-link:hover { border-color: #333; color: #eee; }
+
   /* ── Byline ── */
   #byline {
     position: fixed;
@@ -408,6 +469,7 @@
     text-decoration: none;
     cursor: pointer;
     transition: color 0.15s;
+    z-index: 70;
   }
   #byline:hover { color: #b2b2b2; }
 
@@ -471,7 +533,7 @@
   <button class="drop-btn" id="drop-btn" onclick="dropSelection()" style="display:none">Drop <span id="drop-count">0</span></button>
 </div>
 
-<a id="byline" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
+<a id="byline" href="#" onclick="toggleAbout(); return false;">Info</a>
 
 <div class="resize-handle" id="resize-handle" title="Drag to resize">
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -506,6 +568,20 @@
     </div>
   </div>
 
+  <!-- About panel -->
+  <div class="about-container" id="about-container">
+    <div class="about-logo">
+      <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M75.8216 47.4384C76.1029 46.4526 77.5001 46.4526 77.7814 47.4384L82.1301 62.6763C82.281 63.2051 82.8243 63.5188 83.3578 63.3851L98.7285 59.5322C99.723 59.283 100.422 60.4929 99.7085 61.2295L88.6864 72.6145C88.3039 73.0096 88.3039 73.637 88.6864 74.0321L99.7085 85.4172C100.422 86.1537 99.723 87.3637 98.7285 87.1144L83.3578 83.2616C82.8243 83.1278 82.281 83.4415 82.1301 83.9704L77.7814 99.2082C77.5001 100.194 76.1029 100.194 75.8216 99.2082L71.4729 83.9704C71.322 83.4415 70.7787 83.1278 70.2452 83.2616L54.8745 87.1144C53.88 87.3637 53.1815 86.1537 53.8946 85.4172L64.9166 74.0321C65.2991 73.637 65.2991 73.0096 64.9166 72.6145L53.8946 61.2295C53.1815 60.4929 53.88 59.283 54.8745 59.5322L70.2452 63.3851C70.7787 63.5188 71.322 63.2051 71.4729 62.6763L75.8216 47.4384Z"/><path d="M22.2186 47.4384C22.4999 46.4526 23.8971 46.4526 24.1784 47.4384L28.5271 62.6763C28.678 63.2051 29.2213 63.5188 29.7548 63.3851L45.1255 59.5322C46.12 59.283 46.8185 60.4929 46.1054 61.2295L35.0834 72.6145C34.7009 73.0096 34.7009 73.637 35.0834 74.0321L46.1054 85.4172C46.8185 86.1537 46.12 87.3637 45.1255 87.1144L29.7548 83.2616C29.2213 83.1278 28.678 83.4415 28.5271 83.9704L24.1784 99.2082C23.8971 100.194 22.4999 100.194 22.2186 99.2082L17.8699 83.9704C17.719 83.4415 17.1756 83.1278 16.6422 83.2616L1.27145 87.1144C0.277013 87.3637 -0.421555 86.1537 0.291539 85.4172L11.3136 74.0321C11.6961 73.637 11.6961 73.0096 11.3136 72.6145L0.291538 61.2295C-0.421555 60.4929 0.277013 59.283 1.27145 59.5322L16.6422 63.3851C17.1756 63.5188 17.719 63.2051 17.8699 62.6763L22.2186 47.4384Z"/><path d="M49.0201 0.739384C49.3014 -0.246462 50.6986 -0.246461 50.9799 0.739384L55.3286 15.9773C55.4795 16.5061 56.0228 16.8198 56.5563 16.6861L71.927 12.8332C72.9215 12.5839 73.62 13.7939 72.907 14.5305L61.8849 25.9155C61.5024 26.3106 61.5024 26.938 61.8849 27.3331L72.907 38.7181C73.62 39.4547 72.9215 40.6647 71.927 40.4154L56.5563 36.5625C56.0228 36.4288 55.4795 36.7425 55.3286 37.2713L50.9799 52.5092C50.6986 53.4951 49.3014 53.4951 49.0201 52.5092L44.6714 37.2713C44.5205 36.7425 43.9772 36.4288 43.4437 36.5625L28.073 40.4154C27.0785 40.6647 26.38 39.4547 27.093 38.7181L38.1151 27.3331C38.4976 26.938 38.4976 26.3106 38.1151 25.9155L27.093 14.5305C26.38 13.7939 27.0785 12.5839 28.073 12.8332L43.4437 16.6861C43.9772 16.8198 44.5205 16.5061 44.6714 15.9773L49.0201 0.739384Z"/></svg>
+    </div>
+    <div class="about-title">Asterism</div>
+    <div class="about-version">v1.4</div>
+    <div class="about-tagline">An Are.na image browser for Figma.</div>
+    <div class="about-links">
+      <a class="about-link" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
+      <a class="about-link" href="#" onclick="window.open('https://buy.stripe.com/14A8wI3kb7X4f4E85Obwk07'); return false;">Buy me a coffee</a>
+    </div>
+  </div>
+
   <!-- Image grid -->
   <div class="grid-container" id="grid-container">
     <div class="grid density-3" id="grid"></div>
@@ -536,6 +612,7 @@
   let loadingMore     = false;
   let recentOpen      = false;
   let savedOpen       = false;
+  let aboutOpen       = false;
   let recents         = [];
   let savedChannels   = [];
   let surpriseRunning     = false;
@@ -553,6 +630,7 @@
   const gridWrap      = document.getElementById("grid-container");
   const gridEl        = document.getElementById("grid");
   const sentinel      = document.getElementById("scroll-sentinel");
+  const aboutWrap     = document.getElementById("about-container");
   const recentWrap    = document.getElementById("recent-container");
   const recentListEl  = document.getElementById("recent-list");
   const recentBtn     = document.getElementById("recent-btn");
@@ -676,11 +754,13 @@
     gridWrap.style.display = "none";
     recentWrap.classList.remove("visible");
     savedWrap.classList.remove("visible");
+    aboutWrap.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
   function updateByline() {
-    byline.style.display = (!slug && !recentOpen && !savedOpen) ? "" : "none";
+    const showByStart = (!slug && !recentOpen && !savedOpen);
+    byline.style.display = (showByStart || aboutOpen) ? "" : "none";
   }
 
   function updateDensityBtn() {
@@ -716,9 +796,29 @@
     gridEl.innerHTML = "";
     clearSelection();
     hideAll(); hideError(); hideSearch();
-    recentOpen = false; savedOpen = false;
+    recentOpen = false; savedOpen = false; aboutOpen = false;
     recentBtn.classList.remove("active");
     savedBtn.classList.remove("active");
+    updateByline();
+    updateDensityBtn();
+    updateSurpriseBtn();
+  }
+
+  // ── About ─────────────────────────────────────────────────
+  function toggleAbout() { setAboutOpen(!aboutOpen); }
+
+  function setAboutOpen(val) {
+    aboutOpen = val;
+    if (val) { recentOpen = false; savedOpen = false; }
+    recentBtn.classList.toggle("active", recentOpen);
+    savedBtn.classList.toggle("active", savedOpen);
+    if (val) {
+      hideAll(); hideError(); hideSearch();
+      aboutWrap.classList.add("visible");
+    } else {
+      aboutWrap.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
     updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
@@ -729,7 +829,7 @@
 
   function setRecentOpen(val) {
     recentOpen = val;
-    if (val) savedOpen = false;
+    if (val) { savedOpen = false; aboutOpen = false; aboutWrap.classList.remove("visible"); }
     recentBtn.classList.toggle("active", val);
     savedBtn.classList.toggle("active", false);
     if (val) {
@@ -782,7 +882,7 @@
 
   function setSavedOpen(val) {
     savedOpen = val;
-    if (val) recentOpen = false;
+    if (val) { recentOpen = false; aboutOpen = false; aboutWrap.classList.remove("visible"); }
     savedBtn.classList.toggle("active", val);
     recentBtn.classList.toggle("active", false);
     if (val) {
@@ -953,6 +1053,7 @@
     searchTimer = setTimeout(() => runSearch(val), 350);
   });
 
+  input.addEventListener("focus", () => { if (aboutOpen) setAboutOpen(false); });
   input.addEventListener("blur", () => setTimeout(hideSearch, 150));
 
   function hideSearch() {
