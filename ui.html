@@ -1452,11 +1452,111 @@
     return myChannels;
   }
 
+  // ── Hiding channels with nothing to place ─────────────────
+  // A channel's counts don't say how much of it is media, so the only way to
+  // know is to look inside. Results are cached for the session, since a
+  // channel's contents rarely change while the plugin is open.
+  //
+  // Only the first few pages are checked. A channel whose media begins after
+  // that stays visible: showing a channel that turns out to be empty is a far
+  // smaller annoyance than hiding one that wasn't.
+  const CHANNEL_PROBE_MAX_PAGES = 3;
+  const emptyChannels = new Set();   // slugs known to hold no placeable media
+  const probedChannels = new Set();
+
+  async function probeChannel(ch) {
+    if (probedChannels.has(ch.slug)) return;
+
+    if (!countOf(ch)) {                     // empty channel, nothing to fetch
+      probedChannels.add(ch.slug);
+      emptyChannels.add(ch.slug);
+      return;
+    }
+
+    for (let p = 1; p <= CHANNEL_PROBE_MAX_PAGES; p++) {
+      let payload;
+      try {
+        const res = await authFetch(`${API}/channels/${ch.slug}/contents?per=100&page=${p}`);
+        if (!res.ok) return;                // can't tell — leave it visible
+        payload = await res.json();
+      } catch (_) { return; }
+
+      if (rowsOf(payload).some(isPlaceable)) {
+        probedChannels.add(ch.slug);
+        return;                             // has media
+      }
+      if (!payload?.meta?.has_more_pages) { // saw all of it, found nothing
+        probedChannels.add(ch.slug);
+        emptyChannels.add(ch.slug);
+        return;
+      }
+    }
+    // Ran out of pages to check without a verdict — leave it visible.
+  }
+
+  // Bounded concurrency: a 46-channel account would otherwise fire 46 requests
+  // at once and get rate-limited.
+  async function probeChannels(list, onProgress) {
+    const pending = list.filter((c) => !probedChannels.has(c.slug));
+    if (!pending.length) return;
+    let i = 0;
+    await Promise.all(Array.from({ length: Math.min(6, pending.length) }, async () => {
+      while (i < pending.length) {
+        await probeChannel(pending[i++]);
+      }
+    }));
+    if (onProgress) onProgress();
+  }
+
+  function hasMedia(ch) { return !emptyChannels.has(ch.slug); }
+
   // Heading a title sorts under. Anything not A–Z groups together under #,
   // which is where localeCompare puts them anyway.
   function indexLetter(title) {
     const c = (title || "").trim().charAt(0).toUpperCase();
     return /[A-Z]/.test(c) ? c : "#";
+  }
+
+  function renderChannelIndex(channels) {
+    const visible = channels.filter(hasMedia);
+    if (!visible.length) {
+      myChannelsEl.innerHTML = `<div class="panel-empty">No channels with images.</div>`;
+      return;
+    }
+
+    // Alphabetical, grouped under a letter heading — Are.na's index view.
+    // localeCompare so accented titles sort where a reader expects.
+    const sorted = visible.slice().sort((a, b) =>
+      (a.title || a.slug || "").localeCompare(b.title || b.slug || "", undefined, { sensitivity: "base" })
+    );
+
+    const frag = document.createDocumentFragment();
+    let currentLetter = null;
+
+    sorted.forEach((ch) => {
+      const letter = indexLetter(ch.title || ch.slug);
+      if (letter !== currentLetter) {
+        currentLetter = letter;
+        const head = document.createElement("div");
+        head.className = "index-letter";
+        head.textContent = letter;
+        frag.appendChild(head);
+      }
+
+      const row = document.createElement("div");
+      row.className = "index-row" + (ch.visibility === "private" ? " row-private" : "");
+      row.innerHTML = `
+        <span class="index-row-title">${ch.title || ch.slug}</span>
+        <span class="index-row-count">${countOf(ch)}</span>`;
+      row.addEventListener("click", () => {
+        setAccountOpen(false);
+        loadChannel(ch.slug, { fromAccount: true });
+      });
+      frag.appendChild(row);
+    });
+
+    myChannelsEl.innerHTML = "";
+    myChannelsEl.appendChild(frag);
   }
 
   async function loadMyChannels() {
@@ -1468,39 +1568,12 @@
         return;
       }
 
-      // Alphabetical, grouped under a letter heading — Are.na's index view.
-      // localeCompare so accented titles sort where a reader expects.
-      const sorted = channels.slice().sort((a, b) =>
-        (a.title || a.slug || "").localeCompare(b.title || b.slug || "", undefined, { sensitivity: "base" })
-      );
-
-      const frag = document.createDocumentFragment();
-      let currentLetter = null;
-
-      sorted.forEach((ch) => {
-        const letter = indexLetter(ch.title || ch.slug);
-        if (letter !== currentLetter) {
-          currentLetter = letter;
-          const head = document.createElement("div");
-          head.className = "index-letter";
-          head.textContent = letter;
-          frag.appendChild(head);
-        }
-
-        const row = document.createElement("div");
-        row.className = "index-row" + (ch.visibility === "private" ? " row-private" : "");
-        row.innerHTML = `
-          <span class="index-row-title">${ch.title || ch.slug}</span>
-          <span class="index-row-count">${countOf(ch)}</span>`;
-        row.addEventListener("click", () => {
-          setAccountOpen(false);
-          loadChannel(ch.slug, { fromAccount: true });
-        });
-        frag.appendChild(row);
+      // Draw the full list first so the panel is usable immediately, then
+      // look inside each channel and redraw without the ones holding no media.
+      renderChannelIndex(channels);
+      await probeChannels(channels, () => {
+        if (accountOpen) renderChannelIndex(channels);
       });
-
-      myChannelsEl.innerHTML = "";
-      myChannelsEl.appendChild(frag);
 
     } catch (err) {
       myChannelsEl.innerHTML = `<div class="panel-empty">${err.message}</div>`;
@@ -1951,6 +2024,10 @@
     if (!fresh.length) return;
     nestedChannels = nestedChannels.concat(fresh);
     renderNested();
+
+    // Look inside the new ones and redraw without any that hold no media.
+    const forSlug = slug;
+    probeChannels(fresh, () => { if (slug === forSlug) renderNested(); });
   }
 
   // The API has no channels-only filter — `type=Channel` is accepted but
@@ -1989,20 +2066,21 @@
   }
 
   function renderNested() {
-    if (!nestedChannels.length) {
+    const visible = nestedChannels.filter(hasMedia);
+    if (!visible.length) {
       nestedWrap.style.display = "none";
       nestedListEl.innerHTML = "";
       nestedLabelEl.textContent = "";
       return;
     }
 
-    const n = nestedChannels.length;
+    const n = visible.length;
     nestedLabelEl.textContent = n === 1 ? "1 channel inside" : `${n} channels inside`;
     nestedWrap.style.display = "";
     nestedWrap.classList.toggle("collapsed", nestedCollapsed);
 
     const frag = document.createDocumentFragment();
-    nestedChannels.forEach((ch) => {
+    visible.forEach((ch) => {
       const row = document.createElement("div");
       row.className = "nested-row" + (ch.visibility === "private" ? " row-private" : "");
       row.innerHTML = `
