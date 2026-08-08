@@ -6,14 +6,16 @@ const MIN_HEIGHT     = 400;
 figma.showUI(__html__, { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, themeColors: false });
 
 (async () => {
-  const [recents, channels, density] = await Promise.all([
+  const [recents, channels, density, token] = await Promise.all([
     figma.clientStorage.getAsync("arena-recents"),
     figma.clientStorage.getAsync("arena-saved-channels"),
     figma.clientStorage.getAsync("arena-density"),
+    figma.clientStorage.getAsync("arena-token"),
   ]);
   figma.ui.postMessage({ type: "recents-loaded", recents: recents || [] });
   figma.ui.postMessage({ type: "saved-loaded",   channels: channels || [] });
   figma.ui.postMessage({ type: "density-loaded", density: density || "3" });
+  figma.ui.postMessage({ type: "token-loaded",   token: token || null });
 })();
 
 figma.ui.onmessage = async (msg) => {
@@ -30,6 +32,17 @@ figma.ui.onmessage = async (msg) => {
   // ── Density preference ────────────────────────────────────
   if (msg.type === "save-density") {
     await figma.clientStorage.setAsync("arena-density", msg.density);
+    return;
+  }
+
+  // ── Are.na token ──────────────────────────────────────────
+  if (msg.type === "save-token") {
+    await figma.clientStorage.setAsync("arena-token", msg.token);
+    return;
+  }
+
+  if (msg.type === "clear-token") {
+    await figma.clientStorage.setAsync("arena-token", null);
     return;
   }
 

@@ -70,6 +70,17 @@
   }
   .nav-btn:hover { color: #b2b2b2; }
   .nav-btn.active { color: #eee; }
+  /* A connected account reads as a subtle dot, not a second active state. */
+  .nav-btn.connected::after {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    margin-left: 4px;
+    border-radius: 50%;
+    background: #b58b3a;
+    vertical-align: middle;
+  }
 
   /* ── Density toggle ── */
   .density-btn {
@@ -401,6 +412,60 @@
     overflow: hidden;
   }
 
+  /* ── Account panel ── */
+  .account-container {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 1px solid #1a1a1a;
+  }
+  .account-container.visible { display: flex; }
+
+  .account-connect,
+  .account-connected {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    height: 44px;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 10px;
+  }
+  .account-user { color: #b2b2b2; }
+  .account-user span { color: #eee; }
+
+  .account-hint {
+    flex-shrink: 0;
+    padding: 12px;
+    color: #555;
+    line-height: 1.5;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .account-hint.hidden { display: none; }
+
+  .hint-link {
+    display: inline-block;
+    margin-top: 6px;
+    color: #888;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .hint-link:hover { color: #b2b2b2; }
+
+  .vis-badge {
+    flex-shrink: 0;
+    padding: 1px 4px;
+    border: 1px solid #333;
+    color: #777;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .vis-badge.private { border-color: #4a3a1a; color: #b58b3a; }
+
   /* ── About panel ── */
   .about-container {
     position: fixed;
@@ -521,8 +586,9 @@
   <button class="density-btn" id="density-btn" onclick="cycleDensity()">
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" id="density-icon"></svg>
   </button>
-  <button class="nav-btn" id="recent-btn" onclick="toggleRecent()">Recent</button>
-  <button class="nav-btn" id="saved-btn"  onclick="toggleSaved()">Saved</button>
+  <button class="nav-btn" id="recent-btn"  onclick="toggleRecent()">Recent</button>
+  <button class="nav-btn" id="saved-btn"   onclick="toggleSaved()">Saved</button>
+  <button class="nav-btn" id="account-btn" onclick="toggleAccount()">Account</button>
 </div>
 
 <div class="channel-list"  id="search-results"></div>
@@ -568,6 +634,24 @@
     </div>
   </div>
 
+  <!-- Account panel -->
+  <div class="account-container" id="account-container">
+    <div class="account-connect" id="account-connect">
+      <input type="password" class="saved-input" id="token-input" placeholder="Paste your Are.na token…" />
+      <button class="add-btn" id="connect-btn" onclick="connectToken()">Connect</button>
+    </div>
+    <div class="account-connected" id="account-connected" style="display:none">
+      <span class="account-user">Connected as <span id="account-username"></span></span>
+      <a class="clear-link" href="#" onclick="disconnectToken(); return false;">Disconnect</a>
+    </div>
+    <div class="saved-err" id="account-err"></div>
+    <div class="account-hint" id="account-hint">
+      Connect your account to browse your private channels.
+      <a class="hint-link" href="#" onclick="window.open('https://dev.are.na'); return false;">Get a token at dev.are.na ↗</a>
+    </div>
+    <div class="saved-list" id="my-channels"></div>
+  </div>
+
   <!-- About panel -->
   <div class="about-container" id="about-container">
     <div class="about-logo">
@@ -590,8 +674,17 @@
 </div>
 
 <script>
-  const API = "https://api.are.na/v2";
+  // Are.na is winding down v2: it returns 410 on some routes and ignores Bearer
+  // tokens entirely (v2 replies "authenticated": false even with a valid token).
+  // Private channels are reachable only on v3, so every call here is v3.
+  const API = "https://api.are.na/v3";
   const PER = 30;
+
+  // Sole remaining v2 endpoint. /v3/search requires authentication (401 without
+  // a token), so signed-out users would lose search entirely if it moved to v3.
+  // v2 search still answers anonymously, so it stays the fallback until Are.na
+  // opens up v3 search or fully retires v2.
+  const API_V2_SEARCH = "https://api.are.na/v2/search/channels";
 
   // ── Random frame names ────────────────────────────────────
   const ADJS  = ["amber","ashen","bare","borrowed","broken","calm","copper","dark","dim","distant","dull","empty","faint","felt","flat","forgotten","frozen","gentle","gilt","hollow","hush","idle","ivory","lacquer","lean","light","linen","loose","lunar","matte","mild","muted","narrow","pale","paper","quiet","raw","rough","salt","silver","slow","soft","spare","still","stone","tender","thin","tired","void","warm","worn"];
@@ -618,6 +711,52 @@
   let surpriseRunning     = false;
   let generatingMoodboard = false;
   let selectedBlocks      = [];   // multi-select state
+  let accountOpen         = false;
+  let token               = null;
+  let connectedUser       = null;
+  let myChannels          = null; // cached channel list for the connected account
+
+  // ── Auth ──────────────────────────────────────────────────
+  function authFetch(url, options) {
+    options = options || {};
+    if (!token) return fetch(url, options);
+    const headers = Object.assign({}, options.headers || {}, { "Authorization": "Bearer " + token });
+    return fetch(url, Object.assign({}, options, { headers: headers }));
+  }
+
+  // ── v3 shape helpers ──────────────────────────────────────
+  // v3 images are { src, width, height, small|medium|large|square: { src } }.
+  // `src` is the full-resolution original; the sized variants are objects.
+  function fullUrl(block)  { return block.image?.src || ""; }
+  function thumbUrl(block) {
+    const im = block.image || {};
+    return im.medium?.src || im.large?.src || im.small?.src || im.src || "";
+  }
+  function dims(block) {
+    const im = block.image || {};
+    return { w: im.width || 800, h: im.height || 600 };
+  }
+
+  // v3 returns rows under `data` and paging under `meta`.
+  function rowsOf(payload)  { return Array.isArray(payload?.data) ? payload.data : []; }
+  function pagesOf(payload) { return payload?.meta?.total_pages || 1; }
+
+  // v3 replaces v2's flat `length` with a counts object.
+  function countOf(channel) { return channel?.counts?.contents ?? 0; }
+
+  // Reshape v2 search hits into the v3 channel shape the row renderer expects.
+  function normalizeV2Channels(payload) {
+    const raw = Array.isArray(payload?.channels)
+      ? payload.channels
+      : (payload?.channels?.results || []);
+    return raw.map((c) => ({
+      slug:       c.slug,
+      title:      c.title,
+      visibility: c.status,
+      owner:      { slug: c.user?.slug || c.user?.username || "" },
+      counts:     { contents: c.length ?? 0 },
+    }));
+  }
 
   // ── DOM refs ──────────────────────────────────────────────
   const input         = document.getElementById("url-input");
@@ -648,6 +787,16 @@
   const resizeHandle  = document.getElementById("resize-handle");
   const densityBtn    = document.getElementById("density-btn");
   const densityIcon   = document.getElementById("density-icon");
+  const accountBtn      = document.getElementById("account-btn");
+  const accountWrap     = document.getElementById("account-container");
+  const accountConnect  = document.getElementById("account-connect");
+  const accountConned   = document.getElementById("account-connected");
+  const accountUserEl   = document.getElementById("account-username");
+  const accountErrEl    = document.getElementById("account-err");
+  const accountHintEl   = document.getElementById("account-hint");
+  const tokenInputEl    = document.getElementById("token-input");
+  const connectBtnEl    = document.getElementById("connect-btn");
+  const myChannelsEl    = document.getElementById("my-channels");
 
   // ── Density ───────────────────────────────────────────────
   const DENSITIES = ["1", "2", "3", "4", "5"];
@@ -755,11 +904,12 @@
     recentWrap.classList.remove("visible");
     savedWrap.classList.remove("visible");
     aboutWrap.classList.remove("visible");
+    accountWrap.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
   function updateByline() {
-    const showByStart = (!slug && !recentOpen && !savedOpen);
+    const showByStart = (!slug && !recentOpen && !savedOpen && !accountOpen);
     byline.style.display = (showByStart || aboutOpen) ? "" : "none";
   }
 
@@ -796,9 +946,10 @@
     gridEl.innerHTML = "";
     clearSelection();
     hideAll(); hideError(); hideSearch();
-    recentOpen = false; savedOpen = false; aboutOpen = false;
+    recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
     recentBtn.classList.remove("active");
     savedBtn.classList.remove("active");
+    accountBtn.classList.remove("active");
     updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
@@ -809,9 +960,10 @@
 
   function setAboutOpen(val) {
     aboutOpen = val;
-    if (val) { recentOpen = false; savedOpen = false; }
+    if (val) { recentOpen = false; savedOpen = false; accountOpen = false; }
     recentBtn.classList.toggle("active", recentOpen);
     savedBtn.classList.toggle("active", savedOpen);
+    accountBtn.classList.toggle("active", accountOpen);
     if (val) {
       hideAll(); hideError(); hideSearch();
       aboutWrap.classList.add("visible");
@@ -829,9 +981,13 @@
 
   function setRecentOpen(val) {
     recentOpen = val;
-    if (val) { savedOpen = false; aboutOpen = false; aboutWrap.classList.remove("visible"); }
+    if (val) {
+      savedOpen = false; aboutOpen = false; accountOpen = false;
+      aboutWrap.classList.remove("visible");
+    }
     recentBtn.classList.toggle("active", val);
     savedBtn.classList.toggle("active", false);
+    accountBtn.classList.toggle("active", accountOpen);
     if (val) {
       hideAll(); hideError();
       recentWrap.classList.add("visible");
@@ -882,9 +1038,13 @@
 
   function setSavedOpen(val) {
     savedOpen = val;
-    if (val) { recentOpen = false; aboutOpen = false; aboutWrap.classList.remove("visible"); }
+    if (val) {
+      recentOpen = false; aboutOpen = false; accountOpen = false;
+      aboutWrap.classList.remove("visible");
+    }
     savedBtn.classList.toggle("active", val);
     recentBtn.classList.toggle("active", false);
+    accountBtn.classList.toggle("active", accountOpen);
     if (val) {
       hideAll(); hideError();
       savedWrap.classList.add("visible");
@@ -941,14 +1101,21 @@
     addBtnEl.disabled = true;
     hideSavedErr();
     try {
-      const res = await fetch(`${API}/channels/${s}?per=1`);
-      if (!res.ok) throw new Error("Channel not found.");
+      const res = await authFetch(`${API}/channels/${s}`);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error(token
+            ? "That channel is private and your account can't see it."
+            : "That channel is private. Connect your account under Account.");
+        }
+        throw new Error("Channel not found.");
+      }
       const data = await res.json();
       const ch = {
         slug:       s,
         title:      data.title || s,
-        owner:      data.user?.slug || "",
-        imageCount: data.length || 0,
+        owner:      data.owner?.slug || "",
+        imageCount: countOf(data),
       };
       savedChannels = [ch, ...savedChannels];
       persistSaved();
@@ -977,6 +1144,152 @@
     if (e.key === "Enter") addSavedChannel();
   });
 
+  // ── Account ───────────────────────────────────────────────
+  function toggleAccount() { setAccountOpen(!accountOpen); }
+
+  function setAccountOpen(val) {
+    accountOpen = val;
+    if (val) {
+      recentOpen = false; savedOpen = false; aboutOpen = false;
+      aboutWrap.classList.remove("visible");
+    }
+    accountBtn.classList.toggle("active", val);
+    recentBtn.classList.toggle("active", recentOpen);
+    savedBtn.classList.toggle("active", savedOpen);
+    if (val) {
+      hideAll(); hideError(); hideSearch();
+      accountWrap.classList.add("visible");
+      renderAccount();
+    } else {
+      accountWrap.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
+    updateByline();
+    updateDensityBtn();
+    updateSurpriseBtn();
+  }
+
+  function showAccountErr(msg) { accountErrEl.textContent = msg; accountErrEl.classList.add("visible"); }
+  function hideAccountErr()    { accountErrEl.classList.remove("visible"); }
+
+  function renderAccount() {
+    const connected = !!token && !!connectedUser;
+    accountConnect.style.display = connected ? "none" : "";
+    accountConned.style.display  = connected ? "" : "none";
+    accountHintEl.classList.toggle("hidden", connected);
+    if (connected) {
+      accountUserEl.textContent = connectedUser.slug;
+      loadMyChannels();
+    } else {
+      myChannelsEl.innerHTML = "";
+    }
+    accountBtn.classList.toggle("connected", connected);
+  }
+
+  async function connectToken() {
+    const raw = tokenInputEl.value.trim();
+    if (!raw) return;
+    connectBtnEl.disabled = true;
+    hideAccountErr();
+    try {
+      // /me is v3-only and doubles as token validation.
+      const res = await fetch(`${API}/me`, { headers: { "Authorization": "Bearer " + raw } });
+      if (!res.ok) throw new Error("Invalid token — check and try again.");
+      const user = await res.json();
+      token = raw;
+      connectedUser = { slug: user.slug || user.username || "you", id: user.id };
+      myChannels = null;
+      tokenInputEl.value = "";
+      parent.postMessage({ pluginMessage: { type: "save-token", token: token } }, "*");
+      renderAccount();
+    } catch (err) {
+      showAccountErr(err.message);
+    }
+    connectBtnEl.disabled = false;
+  }
+
+  function disconnectToken() {
+    token = null;
+    connectedUser = null;
+    myChannels = null;
+    tokenInputEl.value = "";
+    myChannelsEl.innerHTML = "";
+    hideAccountErr();
+    parent.postMessage({ pluginMessage: { type: "clear-token" } }, "*");
+    renderAccount();
+  }
+
+  // v3 has no users/:id/channels route; a user's channels come back as Channel
+  // rows on their contents feed, which `type=Channel` isolates. Private ones
+  // appear only when the request is authenticated.
+  async function fetchMyChannels() {
+    if (myChannels) return myChannels;
+    if (!token || !connectedUser?.slug) return [];
+
+    const collected = [];
+    let pg = 1;
+    while (pg <= 20) {
+      const res = await authFetch(
+        `${API}/users/${connectedUser.slug}/contents?type=Channel&per=100&page=${pg}`
+      );
+      if (!res.ok) throw new Error(`Couldn't load your channels (${res.status}).`);
+      const payload = await res.json();
+      collected.push(...rowsOf(payload).filter((c) => c.type === "Channel"));
+      if (!payload?.meta?.has_more_pages) break;
+      pg++;
+    }
+    myChannels = collected;
+    return myChannels;
+  }
+
+  async function loadMyChannels() {
+    myChannelsEl.innerHTML = `<div class="panel-empty">Loading…</div>`;
+    try {
+      const channels = await fetchMyChannels();
+      if (!channels.length) {
+        myChannelsEl.innerHTML = `<div class="panel-empty">No channels found.</div>`;
+        return;
+      }
+
+      // Private first, then by size: private channels are why this list exists.
+      const sorted = channels.slice().sort((a, b) => {
+        const pa = a.visibility === "private" ? 0 : 1;
+        const pb = b.visibility === "private" ? 0 : 1;
+        return pa !== pb ? pa - pb : countOf(b) - countOf(a);
+      });
+
+      const frag = document.createDocumentFragment();
+      sorted.forEach((ch) => {
+        const row = document.createElement("div");
+        row.className = "saved-row";
+        const badge = ch.visibility === "public"
+          ? ""
+          : `<span class="vis-badge ${ch.visibility}">${ch.visibility}</span>`;
+        row.innerHTML = `
+          <div class="saved-row-left">
+            <span class="saved-row-title">${ch.title || ch.slug}</span>
+            <span class="saved-row-meta">${countOf(ch)} blocks</span>
+          </div>
+          ${badge}`;
+        row.addEventListener("click", () => {
+          input.value = ch.slug;
+          setAccountOpen(false);
+          loadChannel(ch.slug);
+        });
+        frag.appendChild(row);
+      });
+      myChannelsEl.innerHTML = "";
+      myChannelsEl.appendChild(frag);
+
+    } catch (err) {
+      myChannelsEl.innerHTML = `<div class="panel-empty">${err.message}</div>`;
+    }
+  }
+
+  tokenInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") connectToken();
+  });
+
   // ── Surprise me ───────────────────────────────────────────
   async function runSurpriseMe() {
     if (surpriseRunning || !savedChannels.length) return;
@@ -993,18 +1306,18 @@
         try {
           const maxPage = Math.max(1, Math.ceil((ch.imageCount || 20) / 20));
           const pg      = Math.ceil(Math.random() * maxPage);
-          const r       = await fetch(`${API}/channels/${ch.slug}/contents?per=20&page=${pg}`);
-          const d       = await r.json();
-          const imgs    = filterImages(d.contents || []);
+          const r       = await authFetch(`${API}/channels/${ch.slug}/contents?per=20&page=${pg}`);
+          if (!r.ok) return;
+          const imgs    = filterImages(rowsOf(await r.json()));
           imgs.slice().sort(() => Math.random() - 0.5).slice(0, 4).forEach((b) => {
-            if (seen.has(b.image.original.url)) return;
-            seen.add(b.image.original.url);
-            const orig = b.image.original;
-            const disp = b.image.display || {};
+            const u = fullUrl(b);
+            if (seen.has(u)) return;
+            seen.add(u);
+            const d = dims(b);
             allImages.push({
-              url:    orig.url,
-              width:  orig.width  || disp.width  || 800,
-              height: orig.height || disp.height || 600,
+              url:    u,
+              width:  d.w,
+              height: d.h,
               title:  b.title || ch.title || "Image",
             });
           });
@@ -1063,10 +1376,17 @@
 
   async function runSearch(q) {
     try {
-      const res  = await fetch(`${API}/search/channels?q=${encodeURIComponent(q)}&per=20`);
-      const data = await res.json();
-      const raw  = Array.isArray(data.channels) ? data.channels : (data.channels?.results || []);
-      const channels = raw.slice().sort((a, b) => (b.length ?? 0) - (a.length ?? 0));
+      // Signed in, search v3 so private channels can surface; otherwise v2,
+      // which is the only search that answers anonymously.
+      const raw = token
+        ? rowsOf(await (await authFetch(
+            `${API}/search?q=${encodeURIComponent(q)}&type=Channel&per=20`
+          )).json()).filter((r) => r.type === "Channel")
+        : normalizeV2Channels(await (await fetch(
+            `${API_V2_SEARCH}?q=${encodeURIComponent(q)}&per=20`
+          )).json());
+
+      const channels = raw.slice().sort((a, b) => countOf(b) - countOf(a));
       if (!channels.length) { hideSearch(); return; }
 
       const frag = document.createDocumentFragment();
@@ -1076,9 +1396,9 @@
         row.innerHTML = `
           <div class="channel-row-left">
             <span class="channel-row-title">${ch.title || ch.slug}</span>
-            <span class="channel-row-owner">${ch.user?.username || ""}</span>
+            <span class="channel-row-owner">${ch.owner?.slug || ""}</span>
           </div>
-          <span class="channel-row-count">${ch.length ?? ""}</span>`;
+          <span class="channel-row-count">${countOf(ch) || ""}</span>`;
         row.addEventListener("mousedown", () => {
           hideSearch();
           input.value = ch.slug;
@@ -1124,14 +1444,26 @@
     input.disabled = true;
 
     try {
-      const res  = await fetch(`${API}/channels/${s}?per=${PER}&page=1`);
-      if (!res.ok) throw new Error(res.status === 404 ? "Channel not found." : `Error ${res.status}.`);
+      // v3 splits channel metadata and contents across two endpoints.
+      const res = await authFetch(`${API}/channels/${s}`);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error(token
+            ? "That channel is private and your account can't see it."
+            : "That channel is private. Connect your Are.na account under Account.");
+        }
+        throw new Error(res.status === 404 ? "Channel not found." : `Error ${res.status}.`);
+      }
 
       const data   = await res.json();
-      totalPages   = Math.ceil((data.length || 0) / PER) || 1;
-      const title  = data.title  || s;
-      const owner  = data.user?.slug || "";
-      const imgs   = filterImages(data.contents);
+      const title  = data.title || s;
+      const owner  = data.owner?.slug || "";
+
+      const cRes = await authFetch(`${API}/channels/${s}/contents?per=${PER}&page=1&sort=position_desc`);
+      if (!cRes.ok) throw new Error(`Error ${cRes.status}.`);
+      const cData = await cRes.json();
+      totalPages  = pagesOf(cData);
+      const imgs  = filterImages(rowsOf(cData));
 
       titleEl.textContent = title;
       countEl.textContent = `${imgs.length} images`;
@@ -1165,9 +1497,9 @@
     loadingMore = true;
     page++;
     try {
-      const res  = await fetch(`${API}/channels/${slug}/contents?per=${PER}&page=${page}`);
+      const res  = await authFetch(`${API}/channels/${slug}/contents?per=${PER}&page=${page}&sort=position_desc`);
       const data = await res.json();
-      const imgs = filterImages(data.contents);
+      const imgs = filterImages(rowsOf(data));
       images     = images.concat(imgs);
       countEl.textContent = `${images.length} images`;
       appendGrid(imgs);
@@ -1176,13 +1508,17 @@
   }
 
   // ── Grid ──────────────────────────────────────────────────
-  function filterImages(contents) {
-    if (!Array.isArray(contents)) return [];
-    return contents
-      .filter((b) => b.class === "Image" && b.image?.original?.url)
+  // Accepts any non-Channel row carrying an image, not just class "Image".
+  // Most Are.na imagery is saved as Link blocks; the stricter v2 rule renders
+  // many channels — private ones especially — completely empty.
+  // v3 moves connected_at onto a `connection` object.
+  function filterImages(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .filter((b) => b.type !== "Channel" && b.image?.src)
       .sort((a, b) => {
-        const aT = new Date(a.connected_at || a.created_at || 0).getTime();
-        const bT = new Date(b.connected_at || b.created_at || 0).getTime();
+        const aT = new Date(a.connection?.connected_at || a.created_at || 0).getTime();
+        const bT = new Date(b.connection?.connected_at || b.created_at || 0).getTime();
         return bT - aT;
       });
   }
@@ -1194,7 +1530,7 @@
     item.dataset.id = block.id;
 
     const img = document.createElement("img");
-    img.src     = block.image.display?.url || block.image.thumb?.url || block.image.original.url;
+    img.src     = thumbUrl(block);
     img.alt     = block.title || "";
     img.loading = "lazy";
     img.onerror = () => { item.style.display = "none"; };
@@ -1221,13 +1557,17 @@
       if (selectedBlocks.length) { clearSelection(); }
 
       item.classList.add("placing");
-      const orig  = block.image.original;
-      const disp  = block.image.display || {};
       const imgEl = item.querySelector("img");
-      const w = orig.width  || disp.width  || imgEl.naturalWidth  || 800;
-      const h = orig.height || disp.height || imgEl.naturalHeight || 600;
+      const d = dims(block);
       parent.postMessage({
-        pluginMessage: { type: "place-image", id: block.id, url: orig.url, width: w, height: h, title: block.title || "Are.na image" }
+        pluginMessage: {
+          type:   "place-image",
+          id:     block.id,
+          url:    fullUrl(block),
+          width:  d.w || imgEl.naturalWidth  || 800,
+          height: d.h || imgEl.naturalHeight || 600,
+          title:  block.title || "Are.na image",
+        }
       }, "*");
     });
 
@@ -1264,13 +1604,12 @@
     dropBtnEl.disabled = true;
 
     const images = selectedBlocks.map((block) => {
-      const orig = block.image.original;
-      const disp = block.image.display || {};
       const imgEl = gridEl.querySelector(`[data-id="${block.id}"] img`);
+      const d = dims(block);
       return {
-        url:    orig.url,
-        width:  orig.width  || disp.width  || imgEl?.naturalWidth  || 800,
-        height: orig.height || disp.height || imgEl?.naturalHeight || 600,
+        url:    fullUrl(block),
+        width:  d.w || imgEl?.naturalWidth  || 800,
+        height: d.h || imgEl?.naturalHeight || 600,
         title:  block.title || "Image",
       };
     });
@@ -1290,37 +1629,40 @@
     countEl.textContent = "Building moodboard…";
 
     try {
-      const orig    = seedBlock.image.original;
-      const disp    = seedBlock.image.display || {};
+      const seedD   = dims(seedBlock);
+      const seedUrl = fullUrl(seedBlock);
       const seedImg = {
-        url:    orig.url,
-        width:  orig.width  || disp.width  || 800,
-        height: orig.height || disp.height || 600,
+        url:    seedUrl,
+        width:  seedD.w,
+        height: seedD.h,
         title:  seedBlock.title || "Are.na image",
       };
 
-      const blockRes  = await fetch(`${API}/blocks/${seedBlock.id}`);
-      const blockData = await blockRes.json();
-      const connections = (blockData.connections || []).slice(0, 8);
+      // Connections are the channels this block also lives in. Connecting an
+      // account widens this to include private channels it can see.
+      const connRes = await authFetch(`${API}/blocks/${seedBlock.id}/connections?per=8`);
+      const connections = rowsOf(await connRes.json()).slice(0, 8);
 
-      const seen      = new Set([orig.url]);
+      const seen      = new Set([seedUrl]);
       const allImages = [seedImg];
 
       await Promise.all(connections.map(async (ch) => {
         try {
           const chSlug = ch.slug || ch.id;
           if (!chSlug) return;
-          const res  = await fetch(`${API}/channels/${chSlug}?per=20&page=1`);
-          const data = await res.json();
-          const imgs = filterImages(data.contents);
+          const res  = await authFetch(`${API}/channels/${chSlug}/contents?per=20&page=1`);
+          if (!res.ok) return;
+          const imgs = filterImages(rowsOf(await res.json()));
           for (const b of imgs) {
             if (allImages.length >= 16) break;
-            if (seen.has(b.image.original.url)) continue;
-            seen.add(b.image.original.url);
+            const u = fullUrl(b);
+            if (seen.has(u)) continue;
+            seen.add(u);
+            const d = dims(b);
             allImages.push({
-              url:    b.image.original.url,
-              width:  b.image.original.width  || 800,
-              height: b.image.original.height || 600,
+              url:    u,
+              width:  d.w,
+              height: d.h,
               title:  b.title || ch.title || "Image",
             });
           }
@@ -1360,6 +1702,22 @@
 
       case "density-loaded":
         applyDensity(msg.density || "default");
+        break;
+
+      case "token-loaded":
+        // Verify the stored token quietly; a revoked one just leaves us signed out.
+        if (msg.token) {
+          fetch(`${API}/me`, { headers: { "Authorization": "Bearer " + msg.token } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((user) => {
+              if (user) {
+                token = msg.token;
+                connectedUser = { slug: user.slug || user.username || "you", id: user.id };
+                accountBtn.classList.add("connected");
+              }
+            })
+            .catch(() => {});
+        }
         break;
 
       case "place-success": {
