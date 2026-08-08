@@ -2,13 +2,16 @@
 
 # Asterism
 
-An Are.na image browser for Figma. Search any public channel, browse its images, and place them directly onto your canvas — or generate a moodboard in one click.
+An Are.na image browser for Figma. Search any channel, browse its images, and place them directly onto your canvas — or generate a moodboard in one click. Connect your Are.na account and your private channels come with it.
 
 ---
 
 ### Features
 
 - Search Are.na channels by keyword or paste a channel URL
+- **Your channels** — connect an Are.na account to browse everything you can see, private channels included
+- **Channels inside channels** — drill into sub-channels, with a breadcrumb back
+- **Light and dark** — follows your Figma theme, or pick one in Settings
 - Browse images in a grid with infinite scroll
 - Click any image to place it on the Figma canvas at its correct aspect ratio
 - **Recent** — channels you browse are saved automatically
@@ -56,6 +59,14 @@ An Are.na image browser for Figma. Search any public channel, browse its images,
 - Surprise me — 4×4 moodboard from a random sample of your saved channels
 - Find similar — co-occurrence moodboard from any image in a channel
 - Moodboard frames use auto layout with hugged height
+
+**v2.0 — Are.na accounts, private channels, light mode**
+- Connect an Are.na account to browse private channels
+- Your channels listed as an alphabetical index
+- Channels nested inside a channel, with a breadcrumb trail
+- Light and dark themes; Auto follows Figma
+- Grid shows photos, GIFs and video only — web links and PDFs are skipped
+- Moved to Are.na's v3 API; v2 no longer accepts authentication
 
 **v1.0 — Initial release**
 - Search and browse public Are.na channels
