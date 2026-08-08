@@ -129,8 +129,41 @@
     border-top: 1px solid #1a1a1a;
   }
   .channel-info.visible { display: flex; }
-  .channel-title { color: #eee; }
-  .channel-count { color: #b2b2b2; }
+  .channel-title {
+    color: #eee;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .channel-count { flex-shrink: 0; color: #b2b2b2; }
+
+  /* ── Breadcrumb ── */
+  .crumb {
+    flex-shrink: 0;
+    max-width: 140px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #888;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s;
+  }
+  .crumb:hover { color: #eee; }
+  /* The open channel is the one crumb allowed to shrink before the others. */
+  .crumb.current {
+    flex-shrink: 1;
+    min-width: 0;
+    color: #eee;
+    cursor: default;
+  }
+  .crumb-sep { flex-shrink: 0; color: #333; }
 
   /* ── Error ── */
   .error-msg {
@@ -515,16 +548,44 @@
   }
   .hint-link:hover { color: #b2b2b2; }
 
-  .vis-badge {
-    flex-shrink: 0;
-    padding: 1px 4px;
-    border: 1px solid #333;
-    color: #777;
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  /* ── Account index (alphabetical, Are.na's index view) ── */
+  .index-letter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 12px 6px;
+    color: #555;
   }
-  .vis-badge.private { border-color: #4a3a1a; color: #b58b3a; }
+  .index-letter::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #1a1a1a;
+  }
+
+  .index-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .index-row:hover { background: #101010; }
+
+  .index-row-title {
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .index-row-count { flex-shrink: 0; color: #555; }
+
+  /* Are.na marks private channels with colour rather than a tag. */
+  .row-private .saved-row-title,
+  .row-private .nested-row-title,
+  .row-private .index-row-title { color: #c97c72; }
 
   /* ── About panel ── */
   .about-container {
@@ -782,6 +843,7 @@
   let accountOpen         = false;
   let nestedChannels      = [];
   let nestedCollapsed     = false;
+  let trail               = [];   // breadcrumb path built by drilling into nested channels
   let token               = null;
   let connectedUser       = null;
   let myChannels          = null; // cached channel list for the connected account
@@ -1019,6 +1081,8 @@
     gridEl.innerHTML = "";
     nestedChannels = [];
     renderNested();
+    trail = [];
+    renderTrail();
     clearSelection();
     hideAll(); hideError(); hideSearch();
     recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
@@ -1317,6 +1381,13 @@
     return myChannels;
   }
 
+  // Heading a title sorts under. Anything not A–Z groups together under #,
+  // which is where localeCompare puts them anyway.
+  function indexLetter(title) {
+    const c = (title || "").trim().charAt(0).toUpperCase();
+    return /[A-Z]/.test(c) ? c : "#";
+  }
+
   async function loadMyChannels() {
     myChannelsEl.innerHTML = `<div class="panel-empty">Loading…</div>`;
     try {
@@ -1326,26 +1397,30 @@
         return;
       }
 
-      // Private first, then by size: private channels are why this list exists.
-      const sorted = channels.slice().sort((a, b) => {
-        const pa = a.visibility === "private" ? 0 : 1;
-        const pb = b.visibility === "private" ? 0 : 1;
-        return pa !== pb ? pa - pb : countOf(b) - countOf(a);
-      });
+      // Alphabetical, grouped under a letter heading — Are.na's index view.
+      // localeCompare so accented titles sort where a reader expects.
+      const sorted = channels.slice().sort((a, b) =>
+        (a.title || a.slug || "").localeCompare(b.title || b.slug || "", undefined, { sensitivity: "base" })
+      );
 
       const frag = document.createDocumentFragment();
+      let currentLetter = null;
+
       sorted.forEach((ch) => {
+        const letter = indexLetter(ch.title || ch.slug);
+        if (letter !== currentLetter) {
+          currentLetter = letter;
+          const head = document.createElement("div");
+          head.className = "index-letter";
+          head.textContent = letter;
+          frag.appendChild(head);
+        }
+
         const row = document.createElement("div");
-        row.className = "saved-row";
-        const badge = ch.visibility === "public"
-          ? ""
-          : `<span class="vis-badge ${ch.visibility}">${ch.visibility}</span>`;
+        row.className = "index-row" + (ch.visibility === "private" ? " row-private" : "");
         row.innerHTML = `
-          <div class="saved-row-left">
-            <span class="saved-row-title">${ch.title || ch.slug}</span>
-            <span class="saved-row-meta">${countOf(ch)} blocks</span>
-          </div>
-          ${badge}`;
+          <span class="index-row-title">${ch.title || ch.slug}</span>
+          <span class="index-row-count">${countOf(ch)}</span>`;
         row.addEventListener("click", () => {
           input.value = ch.slug;
           setAccountOpen(false);
@@ -1353,6 +1428,7 @@
         });
         frag.appendChild(row);
       });
+
       myChannelsEl.innerHTML = "";
       myChannelsEl.appendChild(frag);
 
@@ -1504,7 +1580,12 @@
   }
 
   // ── Channel loading ───────────────────────────────────────
-  async function loadChannel(s) {
+  // opts.fromNested keeps the breadcrumb growing when drilling into a channel
+  // found inside another. Any other entry point (search, Saved, Account,
+  // Recent, a pasted URL) is a fresh start, so the trail resets.
+  // opts.trailIndex rewinds to an existing crumb.
+  async function loadChannel(s, opts) {
+    opts = opts || {};
     hideError();
     slug = s; page = 1; images = [];
     placedIds.clear();
@@ -1549,7 +1630,15 @@
       mergeNested(filterNested(rows));
       scanNested(s, expectedNested);   // background; images render first
 
-      titleEl.textContent = title;
+      if (typeof opts.trailIndex === "number") {
+        trail = trail.slice(0, opts.trailIndex + 1);
+      } else if (opts.fromNested) {
+        trail = trail.concat([{ slug: s, title }]);
+      } else {
+        trail = [{ slug: s, title }];
+      }
+      renderTrail();
+
       countEl.textContent = `${imgs.length} images`;
       infoBar.classList.add("visible");
 
@@ -1678,6 +1767,57 @@
     return item;
   }
 
+  // ── Breadcrumb ────────────────────────────────────────────
+  // Only the last few crumbs fit at plugin width, so deeper trails collapse
+  // to a leading ellipsis that jumps back to the start.
+  const TRAIL_VISIBLE = 3;
+
+  function renderTrail() {
+    titleEl.innerHTML = "";
+    if (!trail.length) return;
+
+    const frag = document.createDocumentFragment();
+    const hidden = Math.max(0, trail.length - TRAIL_VISIBLE);
+
+    const sep = () => {
+      const s = document.createElement("span");
+      s.className = "crumb-sep";
+      s.textContent = "/";
+      return s;
+    };
+
+    if (hidden) {
+      const more = document.createElement("button");
+      more.className = "crumb";
+      more.textContent = "…";
+      more.title = trail.slice(0, hidden).map((t) => t.title).join(" / ");
+      more.addEventListener("click", () => loadChannel(trail[0].slug, { trailIndex: 0 }));
+      frag.appendChild(more);
+      frag.appendChild(sep());
+    }
+
+    trail.slice(hidden).forEach((crumb, i) => {
+      const idx  = hidden + i;
+      const last = idx === trail.length - 1;
+      if (i) frag.appendChild(sep());
+
+      if (last) {
+        const cur = document.createElement("span");
+        cur.className = "crumb current";
+        cur.textContent = crumb.title;
+        frag.appendChild(cur);
+      } else {
+        const btn = document.createElement("button");
+        btn.className = "crumb";
+        btn.textContent = crumb.title;
+        btn.addEventListener("click", () => loadChannel(crumb.slug, { trailIndex: idx }));
+        frag.appendChild(btn);
+      }
+    });
+
+    titleEl.appendChild(frag);
+  }
+
   // ── Nested channels ───────────────────────────────────────
   // Expanded when there are few enough to scan at a glance; past that the
   // list would push the images most of a screen down, so it starts collapsed.
@@ -1747,22 +1887,18 @@
     const frag = document.createDocumentFragment();
     nestedChannels.forEach((ch) => {
       const row = document.createElement("div");
-      row.className = "nested-row";
-      const badge = ch.visibility && ch.visibility !== "public"
-        ? `<span class="vis-badge ${ch.visibility}">${ch.visibility}</span>`
-        : "";
+      row.className = "nested-row" + (ch.visibility === "private" ? " row-private" : "");
       row.innerHTML = `
         <div class="nested-row-left">
           <span class="nested-row-title">${ch.title || ch.slug}</span>
           <span class="nested-row-owner">${ch.owner?.slug || ""}</span>
         </div>
         <div class="nested-row-right">
-          ${badge}
           <span class="nested-row-count">${countOf(ch) || ""}</span>
         </div>`;
       row.addEventListener("click", () => {
         input.value = ch.slug;
-        loadChannel(ch.slug);
+        loadChannel(ch.slug, { fromNested: true });
       });
       frag.appendChild(row);
     });
