@@ -3,19 +3,25 @@ const DEFAULT_HEIGHT = 600;
 const MIN_WIDTH      = 320;
 const MIN_HEIGHT     = 400;
 
-figma.showUI(__html__, { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, themeColors: false });
+// themeColors puts a figma-light / figma-dark class on the UI document. The UI
+// reads that class as a signal for its Auto setting; it does not use Figma's
+// own colour variables, which would make the plugin look like Figma's chrome
+// instead of like Are.na.
+figma.showUI(__html__, { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, themeColors: true });
 
 (async () => {
-  const [recents, channels, density, token] = await Promise.all([
+  const [recents, channels, density, token, theme] = await Promise.all([
     figma.clientStorage.getAsync("arena-recents"),
     figma.clientStorage.getAsync("arena-saved-channels"),
     figma.clientStorage.getAsync("arena-density"),
     figma.clientStorage.getAsync("arena-token"),
+    figma.clientStorage.getAsync("arena-theme"),
   ]);
   figma.ui.postMessage({ type: "recents-loaded", recents: recents || [] });
   figma.ui.postMessage({ type: "saved-loaded",   channels: channels || [] });
   figma.ui.postMessage({ type: "density-loaded", density: density || "3" });
   figma.ui.postMessage({ type: "token-loaded",   token: token || null });
+  figma.ui.postMessage({ type: "theme-loaded",   theme: theme || "auto" });
 })();
 
 figma.ui.onmessage = async (msg) => {
@@ -32,6 +38,12 @@ figma.ui.onmessage = async (msg) => {
   // ── Density preference ────────────────────────────────────
   if (msg.type === "save-density") {
     await figma.clientStorage.setAsync("arena-density", msg.density);
+    return;
+  }
+
+  // ── Theme preference ──────────────────────────────────────
+  if (msg.type === "save-theme") {
+    await figma.clientStorage.setAsync("arena-theme", msg.theme);
     return;
   }
 

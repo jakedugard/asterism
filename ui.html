@@ -3,13 +3,61 @@
 <head>
 <meta charset="utf-8">
 <style>
+  /* ── Palette ──────────────────────────────────────────────
+     Colours come from Are.na's own token set, so the plugin reads as part of
+     Are.na rather than next to it. Their greys map almost exactly onto what
+     Asterism already used — gray0 #000, gray1 #1A1A1A, gray2 #333,
+     gray5 #B2B2B2 were all already here — so dark is unchanged and light is
+     Are.na's light ramp.
+
+     Are.na's ramp runs gray0 (ground) → gray7 (strongest ink) and mirrors
+     between themes. Text only ever uses the top four steps; the bottom four
+     are surfaces. Asterism carries one more text level than that range
+     allows, so --text-faint is the single interpolated value below.
+     ─────────────────────────────────────────────────────── */
+  :root {
+    --bg:           #000;      /* gray0  */
+    --bg-hover:     #101010;
+    --bg-raised:    #111;
+    --line-soft:    #141414;
+    --line:         #1a1a1a;   /* gray1  */
+    --line-strong:  #333;      /* gray2  */
+    --text:         #eee;      /* gray6  */
+    --text-2:       #b2b2b2;   /* gray5  */
+    --text-3:       #888;
+    --text-faint:   #555;
+    --text-fainter: #444;
+    --logo-dim:     #2a2a2a;
+    --red:          #EB6864;   /* red3 — errors and private channels */
+    --overlay:      rgba(0, 0, 0, 0.5);
+    --overlay-strong: rgba(0, 0, 0, 0.55);
+  }
+
+  :root[data-theme="light"] {
+    --bg:           #FFF;      /* gray0  */
+    --bg-hover:     #F7F7F7;   /* gray1  */
+    --bg-raised:    #F7F7F7;   /* gray1  */
+    --line-soft:    #F2F2F2;
+    --line:         #EDEDED;   /* gray2  */
+    --line-strong:  #DEDEDE;   /* gray3  */
+    --text:         #333;      /* gray6  */
+    --text-2:       #696969;   /* gray5  */
+    --text-3:       #999;      /* gray4  */
+    --text-faint:   #B8B8B8;   /* between gray4 and gray3 — see note above */
+    --text-fainter: #CFCFCF;
+    --logo-dim:     #DEDEDE;   /* gray3  */
+    --red:          #B93D3D;   /* red3   */
+    --overlay:      rgba(0, 0, 0, 0.45);
+    --overlay-strong: rgba(0, 0, 0, 0.5);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: Arial, sans-serif;
     font-size: 11px;
-    background: #000;
-    color: #b2b2b2;
+    background: var(--bg);
+    color: var(--text-2);
     height: 100vh;
     overflow: hidden;
     display: flex;
@@ -25,7 +73,7 @@
     height: 44px;
     position: relative;
     z-index: 70;
-    background: #000;
+    background: var(--bg);
   }
 
   .header-logo {
@@ -35,9 +83,9 @@
     margin-right: 10px;
     cursor: pointer;
   }
-  .header-logo svg path { fill: #b2b2b2; transition: fill 0.15s; }
+  .header-logo svg path { fill: var(--text-2); transition: fill 0.15s; }
   .header-logo:hover svg path,
-  .header:focus-within .header-logo svg path { fill: #eee; }
+  .header:focus-within .header-logo svg path { fill: var(--text); }
 
   input[type="text"] {
     flex: 1;
@@ -46,14 +94,14 @@
     border: none;
     outline: none;
     padding: 0;
-    color: #b2b2b2;
+    color: var(--text-2);
     font-size: 11px;
     font-family: inherit;
     transition: color 0.15s;
   }
-  input[type="text"]::placeholder { color: #b2b2b2; }
-  input[type="text"]:focus { color: #eee; }
-  input[type="text"]:focus::placeholder { color: #555; }
+  input[type="text"]::placeholder { color: var(--text-2); }
+  input[type="text"]:focus { color: var(--text); }
+  input[type="text"]:focus::placeholder { color: var(--text-faint); }
 
   /* The search field is idle most of the time, so it sits back until
      approached. flex:1 already stretches it across the middle of the header,
@@ -71,15 +119,15 @@
     background: none;
     border: none;
     padding: 0;
-    color: #888;
+    color: var(--text-3);
     font-size: 11px;
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
     transition: color 0.15s;
   }
-  .nav-btn:hover { color: #b2b2b2; }
-  .nav-btn.active { color: #eee; }
+  .nav-btn:hover { color: var(--text-2); }
+  .nav-btn.active { color: var(--text); }
   /* Connected, the Account button becomes the avatar. The button keeps the
      text button's 14px gap but drops to the circle's own size. */
   .nav-btn.is-avatar {
@@ -110,8 +158,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #1a1a1a;
-    color: #b2b2b2;
+    background: var(--line);
+    color: var(--text-2);
     font-size: 8px;
     letter-spacing: 0.02em;
   }
@@ -128,8 +176,8 @@
     align-items: center;
     justify-content: center;
   }
-  .density-btn svg rect { fill: #888; transition: fill 0.15s; }
-  .density-btn:hover svg rect { fill: #eee; }
+  .density-btn svg rect { fill: var(--text-3); transition: fill 0.15s; }
+  .density-btn:hover svg rect { fill: var(--text); }
 
   /* ── Search results dropdown ── */
   .channel-list { flex-shrink: 0; display: none; max-height: calc(100vh - 44px); overflow-y: auto; scrollbar-width: none; }
@@ -143,15 +191,15 @@
     padding: 8px 12px;
     gap: 12px;
     cursor: pointer;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--line);
     transition: background 0.1s;
   }
   .channel-row:last-child { border-bottom: none; }
-  .channel-row:hover { background: #111; }
+  .channel-row:hover { background: var(--bg-raised); }
   .channel-row-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .channel-row-title { color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .channel-row-owner { color: #b2b2b2; }
-  .channel-row-count { flex-shrink: 0; color: #b2b2b2; }
+  .channel-row-title { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .channel-row-owner { color: var(--text-2); }
+  .channel-row-count { flex-shrink: 0; color: var(--text-2); }
 
   /* ── Channel info bar ── */
   .channel-info {
@@ -160,18 +208,18 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    border-top: 1px solid #1a1a1a;
+    border-top: 1px solid var(--line);
   }
   .channel-info.visible { display: flex; }
   .channel-title {
-    color: #eee;
+    color: var(--text);
     display: flex;
     align-items: baseline;
     gap: 6px;
     min-width: 0;
     overflow: hidden;
   }
-  .channel-count { flex-shrink: 0; color: #b2b2b2; }
+  .channel-count { flex-shrink: 0; color: var(--text-2); }
 
   /* ── Breadcrumb ── */
   .crumb {
@@ -180,7 +228,7 @@
     background: none;
     border: none;
     padding: 0;
-    color: #888;
+    color: var(--text-3);
     font-size: 11px;
     font-family: inherit;
     cursor: pointer;
@@ -189,22 +237,22 @@
     text-overflow: ellipsis;
     transition: color 0.15s;
   }
-  .crumb:hover { color: #eee; }
+  .crumb:hover { color: var(--text); }
   /* The open channel is the one crumb allowed to shrink before the others. */
   .crumb.current {
     flex-shrink: 1;
     min-width: 0;
-    color: #eee;
+    color: var(--text);
     cursor: default;
   }
-  .crumb-sep { flex-shrink: 0; color: #333; }
+  .crumb-sep { flex-shrink: 0; color: var(--line-strong); }
 
   /* ── Error ── */
   .error-msg {
     flex-shrink: 0;
     display: none;
     padding: 8px 12px;
-    color: #e85050;
+    color: var(--red);
   }
   .error-msg.visible { display: block; }
 
@@ -224,7 +272,7 @@
      click, and a channel has nothing to place. */
   .nested {
     margin-bottom: 12px;
-    border: 1px solid #1a1a1a;
+    border: 1px solid var(--line);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -237,23 +285,23 @@
     padding: 9px 10px;
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-3);
     font-size: 11px;
     font-family: inherit;
     text-align: left;
     cursor: pointer;
     transition: color 0.15s;
   }
-  .nested-toggle:hover { color: #b2b2b2; }
+  .nested-toggle:hover { color: var(--text-2); }
 
   .nested-caret {
-    color: #555;
+    color: var(--text-faint);
     transition: transform 0.15s;
   }
   .nested.collapsed .nested-caret { transform: rotate(-90deg); }
   .nested.collapsed .nested-list  { display: none; }
 
-  .nested-list { border-top: 1px solid #1a1a1a; }
+  .nested-list { border-top: 1px solid var(--line); }
 
   .nested-row {
     display: flex;
@@ -262,22 +310,22 @@
     gap: 10px;
     padding: 8px 10px;
     cursor: pointer;
-    border-bottom: 1px solid #141414;
+    border-bottom: 1px solid var(--line-soft);
     transition: background 0.1s;
   }
   .nested-row:last-child { border-bottom: none; }
-  .nested-row:hover { background: #101010; }
+  .nested-row:hover { background: var(--bg-hover); }
 
   .nested-row-left  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .nested-row-title {
-    color: #eee;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .nested-row-owner { color: #555; }
+  .nested-row-owner { color: var(--text-faint); }
   .nested-row-right { flex-shrink: 0; display: flex; align-items: baseline; gap: 8px; }
-  .nested-row-count { color: #888; }
+  .nested-row-count { color: var(--text-3); }
 
   .grid {
     display: grid;
@@ -295,7 +343,7 @@
     aspect-ratio: 1;
     overflow: hidden;
     cursor: pointer;
-    background: #111;
+    background: var(--bg-raised);
   }
   .grid-item img {
     width: 100%; height: 100%;
@@ -329,14 +377,14 @@
   .grid-item.placing::after {
     content: "";
     position: absolute; inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: var(--overlay);
   }
   .grid-item.placed img { opacity: 0.25; }
 
   .grid-item.selected::after {
     content: "";
     position: absolute; inset: 0;
-    background: rgba(0,0,0,0.55);
+    background: var(--overlay-strong);
     pointer-events: none;
   }
   .grid-item.selected img { opacity: 0.35; }
@@ -349,7 +397,7 @@
     display: none;
     flex-direction: column;
     overflow: hidden;
-    border-top: 1px solid #1a1a1a;
+    border-top: 1px solid var(--line);
   }
   .recent-container.visible { display: flex; }
 
@@ -367,7 +415,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--text-faint);
     text-align: center;
     line-height: 1.5;
   }
@@ -378,12 +426,12 @@
   }
 
   .clear-link {
-    color: #888;
+    color: var(--text-3);
     text-decoration: none;
     cursor: pointer;
     transition: color 0.15s;
   }
-  .clear-link:hover { color: #e85050; }
+  .clear-link:hover { color: var(--red); }
 
   /* ── Saved panel ── */
   .saved-container {
@@ -391,7 +439,7 @@
     display: none;
     flex-direction: column;
     overflow: hidden;
-    border-top: 1px solid #1a1a1a;
+    border-top: 1px solid var(--line);
   }
   .saved-container.visible { display: flex; }
 
@@ -401,7 +449,7 @@
     align-items: center;
     padding: 0 12px;
     height: 44px;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--line);
     gap: 10px;
   }
 
@@ -411,33 +459,33 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #b2b2b2;
+    color: var(--text-2);
     font-size: 11px;
     font-family: inherit;
     transition: color 0.15s;
   }
-  .saved-input::placeholder { color: #555; }
-  .saved-input:focus { color: #eee; }
+  .saved-input::placeholder { color: var(--text-faint); }
+  .saved-input:focus { color: var(--text); }
 
   .add-btn {
     flex-shrink: 0;
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-3);
     font-size: 11px;
     font-family: inherit;
     cursor: pointer;
     padding: 0;
     transition: color 0.15s;
   }
-  .add-btn:hover { color: #eee; }
+  .add-btn:hover { color: var(--text); }
   .add-btn:disabled { opacity: 0.4; cursor: default; }
 
   .saved-err {
     flex-shrink: 0;
     display: none;
     padding: 6px 12px;
-    color: #e85050;
+    color: var(--red);
   }
   .saved-err.visible { display: block; }
 
@@ -456,11 +504,11 @@
     padding: 8px 12px;
     gap: 12px;
     cursor: pointer;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--line);
     transition: background 0.1s;
   }
   .saved-row:last-child { border-bottom: none; }
-  .saved-row:hover { background: #111; }
+  .saved-row:hover { background: var(--bg-raised); }
 
   .saved-row-left {
     flex: 1;
@@ -469,28 +517,28 @@
     gap: 2px;
     min-width: 0;
   }
-  .saved-row-title { color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .saved-row-meta  { color: #b2b2b2; }
+  .saved-row-title { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-row-meta  { color: var(--text-2); }
 
   .remove-btn {
     flex-shrink: 0;
     background: none;
     border: none;
-    color: #444;
+    color: var(--text-fainter);
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
     padding: 2px 0 2px 4px;
     transition: color 0.15s;
   }
-  .remove-btn:hover { color: #e85050; }
+  .remove-btn:hover { color: var(--red); }
 
   /* ── Drop selection button ── */
   .drop-btn {
     flex-shrink: 0;
     background: none;
-    border: 1px solid #333;
-    color: #b2b2b2;
+    border: 1px solid var(--line-strong);
+    color: var(--text-2);
     font-size: 11px;
     font-family: inherit;
     padding: 4px 10px;
@@ -499,13 +547,13 @@
     transition: border-color 0.15s, color 0.15s;
     white-space: nowrap;
   }
-  .drop-btn:hover { border-color: #888; color: #eee; }
+  .drop-btn:hover { border-color: var(--text-3); color: var(--text); }
 
   /* ── Surprise button (Saved panel footer) ── */
   .surprise-btn {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-3);
     font-size: 11px;
     font-family: inherit;
     padding: 0;
@@ -515,10 +563,10 @@
     gap: 6px;
     transition: color 0.15s;
   }
-  .surprise-btn:hover { color: #eee; }
-  .surprise-btn:hover svg path { fill: #eee; }
+  .surprise-btn:hover { color: var(--text); }
+  .surprise-btn:hover svg path { fill: var(--text); }
   .surprise-btn:disabled { opacity: 0.3; cursor: default; }
-  .surprise-btn svg path { fill: #888; transition: fill 0.15s; }
+  .surprise-btn svg path { fill: var(--text-3); transition: fill 0.15s; }
 
   /* ── Loading ── */
   .loading {
@@ -526,7 +574,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-    color: #b2b2b2;
+    color: var(--text-2);
   }
   .loading.visible { display: flex; }
 
@@ -545,7 +593,7 @@
     display: none;
     flex-direction: column;
     overflow: hidden;
-    border-top: 1px solid #1a1a1a;
+    border-top: 1px solid var(--line);
   }
   .account-container.visible { display: flex; }
 
@@ -557,30 +605,30 @@
     justify-content: space-between;
     padding: 0 12px;
     height: 44px;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--line);
     gap: 10px;
   }
-  .account-user { color: #b2b2b2; }
-  .account-user span { color: #eee; }
+  .account-user { color: var(--text-2); }
+  .account-user span { color: var(--text); }
 
   .account-hint {
     flex-shrink: 0;
     padding: 12px;
-    color: #555;
+    color: var(--text-faint);
     line-height: 1.5;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--line);
   }
   .account-hint.hidden { display: none; }
 
   .hint-link {
     display: inline-block;
     margin-top: 6px;
-    color: #888;
+    color: var(--text-3);
     text-decoration: none;
     cursor: pointer;
     transition: color 0.15s;
   }
-  .hint-link:hover { color: #b2b2b2; }
+  .hint-link:hover { color: var(--text-2); }
 
   /* ── Account index (alphabetical, Are.na's index view) ── */
   .index-letter {
@@ -588,13 +636,13 @@
     align-items: center;
     gap: 8px;
     padding: 14px 12px 6px;
-    color: #555;
+    color: var(--text-faint);
   }
   .index-letter::after {
     content: "";
     flex: 1;
     height: 1px;
-    background: #1a1a1a;
+    background: var(--line);
   }
 
   .index-row {
@@ -606,20 +654,20 @@
     cursor: pointer;
     transition: background 0.1s;
   }
-  .index-row:hover { background: #101010; }
+  .index-row:hover { background: var(--bg-hover); }
 
   .index-row-title {
-    color: #eee;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .index-row-count { flex-shrink: 0; color: #555; }
+  .index-row-count { flex-shrink: 0; color: var(--text-faint); }
 
   /* Are.na marks private channels with colour rather than a tag. */
   .row-private .saved-row-title,
   .row-private .nested-row-title,
-  .row-private .index-row-title { color: #c97c72; }
+  .row-private .index-row-title { color: var(--red); }
 
   /* ── About panel ── */
   .about-container {
@@ -630,7 +678,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: #000;
+    background: var(--bg);
     overflow-y: auto;
     scrollbar-width: none;
     z-index: 60;
@@ -639,23 +687,51 @@
   .about-container.visible { display: flex; }
 
   .about-logo { margin-bottom: 22px; }
-  .about-logo svg path { fill: #2a2a2a; }
+  .about-logo svg path { fill: var(--logo-dim); }
 
   .about-title {
-    color: #eee;
+    color: var(--text);
     font-size: 13px;
     margin-bottom: 4px;
   }
   .about-version {
-    color: #555;
+    color: var(--text-faint);
     margin-bottom: 18px;
   }
   .about-tagline {
-    color: #b2b2b2;
+    color: var(--text-2);
     text-align: center;
     line-height: 1.5;
     margin-bottom: 28px;
     max-width: 280px;
+  }
+
+  /* ── Theme switch ── */
+  .theme-switch {
+    display: flex;
+    width: 160px;
+    margin-bottom: 18px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .theme-opt {
+    flex: 1;
+    padding: 7px 0;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--line);
+    color: var(--text-3);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .theme-opt:last-child { border-right: none; }
+  .theme-opt:hover { color: var(--text); }
+  .theme-opt.selected {
+    background: var(--bg-raised);
+    color: var(--text);
   }
 
   .about-links {
@@ -670,28 +746,28 @@
     justify-content: center;
     align-items: center;
     padding: 10px 14px;
-    border: 1px solid #1a1a1a;
+    border: 1px solid var(--line);
     border-radius: 3px;
-    color: #b2b2b2;
+    color: var(--text-2);
     text-decoration: none;
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s;
   }
-  .about-link:hover { border-color: #333; color: #eee; }
+  .about-link:hover { border-color: var(--line-strong); color: var(--text); }
 
   /* ── Byline ── */
   #byline {
     position: fixed;
     bottom: 12px;
     left: 12px;
-    color: #444;
+    color: var(--text-fainter);
     font-size: 11px;
     text-decoration: none;
     cursor: pointer;
     transition: color 0.15s;
     z-index: 70;
   }
-  #byline:hover { color: #b2b2b2; }
+  #byline:hover { color: var(--text-2); }
 
   /* ── Resize handle ── */
   .resize-handle {
@@ -703,7 +779,7 @@
     cursor: nwse-resize;
     z-index: 100;
     touch-action: none;
-    color: #b2b2b2;
+    color: var(--text-2);
   }
   .resize-handle svg {
     position: absolute;
@@ -725,7 +801,7 @@
     right: 0;
     bottom: 0;
     height: 3px;
-    background: #000;
+    background: var(--bg);
     z-index: 50;
     pointer-events: none;
   }
@@ -815,6 +891,13 @@
     <div class="about-title">Asterism</div>
     <div class="about-version">v1.4</div>
     <div class="about-tagline">An Are.na image browser for Figma.</div>
+
+    <div class="theme-switch" id="theme-switch">
+      <button class="theme-opt" data-theme-opt="auto"  onclick="setTheme('auto')">Auto</button>
+      <button class="theme-opt" data-theme-opt="light" onclick="setTheme('light')">Light</button>
+      <button class="theme-opt" data-theme-opt="dark"  onclick="setTheme('dark')">Dark</button>
+    </div>
+
     <div class="about-links">
       <a class="about-link" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
       <a class="about-link" href="#" onclick="window.open('https://buy.stripe.com/14A8wI3kb7X4f4E85Obwk07'); return false;">Buy me a coffee</a>
@@ -980,6 +1063,36 @@
   // Migrate legacy keys from earlier versions
   const LEGACY_DENSITY = { compact: "2", default: "3", comfortable: "5" };
   let currentDensity = "3";
+
+  // ── Theme ─────────────────────────────────────────────────
+  // "auto" follows Figma's own light/dark setting, which arrives as a
+  // figma-light / figma-dark class on <html> (see themeColors in code.js).
+  // Only the *choice* of palette is taken from Figma — the colours themselves
+  // are Are.na's either way.
+  let themePref = "auto";
+
+  function figmaIsLight() {
+    return document.documentElement.classList.contains("figma-light");
+  }
+
+  function applyTheme() {
+    const resolved = themePref === "auto" ? (figmaIsLight() ? "light" : "dark") : themePref;
+    document.documentElement.setAttribute("data-theme", resolved);
+    document.querySelectorAll(".theme-opt").forEach((b) => {
+      b.classList.toggle("selected", b.dataset.themeOpt === themePref);
+    });
+  }
+
+  function setTheme(pref) {
+    themePref = pref;
+    applyTheme();
+    parent.postMessage({ pluginMessage: { type: "save-theme", theme: pref } }, "*");
+  }
+
+  // Figma swaps the class on <html> when the user changes their editor theme;
+  // in auto that has to repaint without a reload.
+  new MutationObserver(() => { if (themePref === "auto") applyTheme(); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
   function applyDensity(d) {
     if (LEGACY_DENSITY[d]) d = LEGACY_DENSITY[d];
@@ -2216,6 +2329,11 @@
         updateSurpriseBtn();
         break;
 
+      case "theme-loaded":
+        themePref = msg.theme || "auto";
+        applyTheme();
+        break;
+
       case "density-loaded":
         applyDensity(msg.density || "default");
         break;
@@ -2281,6 +2399,7 @@
 
   // ── Init ──────────────────────────────────────────────────
   applyDensity("3");
+  applyTheme();
   updateByline();
   updateDensityBtn();
   updateSurpriseBtn();
