@@ -152,6 +152,66 @@
   }
   .grid-container::-webkit-scrollbar { display: none; }
 
+  /* ── Nested channels ── */
+  /* Kept out of the image grid on purpose: grid tiles place into Figma on
+     click, and a channel has nothing to place. */
+  .nested {
+    margin-bottom: 12px;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .nested-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 10px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .nested-toggle:hover { color: #b2b2b2; }
+
+  .nested-caret {
+    color: #555;
+    transition: transform 0.15s;
+  }
+  .nested.collapsed .nested-caret { transform: rotate(-90deg); }
+  .nested.collapsed .nested-list  { display: none; }
+
+  .nested-list { border-top: 1px solid #1a1a1a; }
+
+  .nested-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #141414;
+    transition: background 0.1s;
+  }
+  .nested-row:last-child { border-bottom: none; }
+  .nested-row:hover { background: #101010; }
+
+  .nested-row-left  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .nested-row-title {
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nested-row-owner { color: #555; }
+  .nested-row-right { flex-shrink: 0; display: flex; align-items: baseline; gap: 8px; }
+  .nested-row-count { color: #888; }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -668,6 +728,14 @@
 
   <!-- Image grid -->
   <div class="grid-container" id="grid-container">
+    <!-- Channels nested inside the open channel -->
+    <div class="nested" id="nested" style="display:none">
+      <button class="nested-toggle" id="nested-toggle" onclick="toggleNested()">
+        <span id="nested-label"></span>
+        <span class="nested-caret" id="nested-caret">▾</span>
+      </button>
+      <div class="nested-list" id="nested-list"></div>
+    </div>
     <div class="grid density-3" id="grid"></div>
     <div class="scroll-sentinel" id="scroll-sentinel"></div>
   </div>
@@ -712,6 +780,8 @@
   let generatingMoodboard = false;
   let selectedBlocks      = [];   // multi-select state
   let accountOpen         = false;
+  let nestedChannels      = [];
+  let nestedCollapsed     = false;
   let token               = null;
   let connectedUser       = null;
   let myChannels          = null; // cached channel list for the connected account
@@ -797,6 +867,9 @@
   const tokenInputEl    = document.getElementById("token-input");
   const connectBtnEl    = document.getElementById("connect-btn");
   const myChannelsEl    = document.getElementById("my-channels");
+  const nestedWrap      = document.getElementById("nested");
+  const nestedListEl    = document.getElementById("nested-list");
+  const nestedLabelEl   = document.getElementById("nested-label");
 
   // ── Density ───────────────────────────────────────────────
   const DENSITIES = ["1", "2", "3", "4", "5"];
@@ -944,6 +1017,8 @@
     placedIds.clear();
     input.value = "";
     gridEl.innerHTML = "";
+    nestedChannels = [];
+    renderNested();
     clearSelection();
     hideAll(); hideError(); hideSearch();
     recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
@@ -1435,6 +1510,8 @@
     placedIds.clear();
     clearSelection();
     gridEl.innerHTML = "";
+    nestedChannels = [];
+    renderNested();
     updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
@@ -1463,7 +1540,14 @@
       if (!cRes.ok) throw new Error(`Error ${cRes.status}.`);
       const cData = await cRes.json();
       totalPages  = pagesOf(cData);
-      const imgs  = filterImages(rowsOf(cData));
+      const rows  = rowsOf(cData);
+      const imgs  = filterImages(rows);
+
+      const expectedNested = data.counts?.channels || 0;
+      nestedCollapsed = expectedNested > NESTED_AUTO_EXPAND;
+      nestedChannels  = [];
+      mergeNested(filterNested(rows));
+      scanNested(s, expectedNested);   // background; images render first
 
       titleEl.textContent = title;
       countEl.textContent = `${imgs.length} images`;
@@ -1499,10 +1583,14 @@
     try {
       const res  = await authFetch(`${API}/channels/${slug}/contents?per=${PER}&page=${page}&sort=position_desc`);
       const data = await res.json();
-      const imgs = filterImages(rowsOf(data));
+      const rows = rowsOf(data);
+      const imgs = filterImages(rows);
       images     = images.concat(imgs);
       countEl.textContent = `${images.length} images`;
       appendGrid(imgs);
+
+      // Nested channels can appear on any page, so keep folding them in.
+      mergeNested(filterNested(rows));
     } catch (_) { page--; }
     loadingMore = false;
   }
@@ -1512,6 +1600,12 @@
   // Most Are.na imagery is saved as Link blocks; the stricter v2 rule renders
   // many channels — private ones especially — completely empty.
   // v3 moves connected_at onto a `connection` object.
+  // Channels nested inside a channel arrive as Channel rows in its contents.
+  function filterNested(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.filter((b) => b.type === "Channel");
+  }
+
   function filterImages(rows) {
     if (!Array.isArray(rows)) return [];
     return rows
@@ -1582,6 +1676,98 @@
     item.appendChild(mbBtn);
 
     return item;
+  }
+
+  // ── Nested channels ───────────────────────────────────────
+  // Expanded when there are few enough to scan at a glance; past that the
+  // list would push the images most of a screen down, so it starts collapsed.
+  const NESTED_AUTO_EXPAND = 6;
+
+  function toggleNested() {
+    nestedCollapsed = !nestedCollapsed;
+    nestedWrap.classList.toggle("collapsed", nestedCollapsed);
+  }
+
+  function mergeNested(found) {
+    const seen = new Set(nestedChannels.map((c) => c.id));
+    const fresh = found.filter((c) => !seen.has(c.id));
+    if (!fresh.length) return;
+    nestedChannels = nestedChannels.concat(fresh);
+    renderNested();
+  }
+
+  // The API has no channels-only filter — `type=Channel` is accepted but
+  // ignored on channel contents — so nested channels have to be scanned for.
+  //
+  // Scanning runs oldest-first: sub-channels are almost always connected early,
+  // so they cluster at low positions. On a 3,000-block test channel this found
+  // 18 of 20 in three pages, where newest-first found none in ten. The page cap
+  // stops a huge channel firing dozens of requests; anything past it still
+  // folds in as the grid pages on scroll.
+  //
+  // `expected` (counts.channels) can exceed the rows actually returned, since
+  // it includes channels the viewer can't see, so it only ends the scan early
+  // and never drives what gets displayed.
+  const NESTED_SCAN_MAX_PAGES = 12;
+
+  async function scanNested(s, expected) {
+    if (!expected) return;
+    const found = [];
+    const seen  = new Set();
+    for (let p = 1; p <= NESTED_SCAN_MAX_PAGES && found.length < expected; p++) {
+      let payload;
+      try {
+        const res = await authFetch(`${API}/channels/${s}/contents?per=100&page=${p}&sort=position_asc`);
+        if (!res.ok) return;
+        payload = await res.json();
+      } catch (_) { return; }
+
+      if (slug !== s) return;  // navigated away mid-scan
+      for (const c of filterNested(rowsOf(payload))) {
+        if (!seen.has(c.id)) { seen.add(c.id); found.push(c); }
+      }
+      if (found.length) mergeNested(found);
+      if (!payload?.meta?.has_more_pages) return;
+    }
+  }
+
+  function renderNested() {
+    if (!nestedChannels.length) {
+      nestedWrap.style.display = "none";
+      nestedListEl.innerHTML = "";
+      nestedLabelEl.textContent = "";
+      return;
+    }
+
+    const n = nestedChannels.length;
+    nestedLabelEl.textContent = n === 1 ? "1 channel inside" : `${n} channels inside`;
+    nestedWrap.style.display = "";
+    nestedWrap.classList.toggle("collapsed", nestedCollapsed);
+
+    const frag = document.createDocumentFragment();
+    nestedChannels.forEach((ch) => {
+      const row = document.createElement("div");
+      row.className = "nested-row";
+      const badge = ch.visibility && ch.visibility !== "public"
+        ? `<span class="vis-badge ${ch.visibility}">${ch.visibility}</span>`
+        : "";
+      row.innerHTML = `
+        <div class="nested-row-left">
+          <span class="nested-row-title">${ch.title || ch.slug}</span>
+          <span class="nested-row-owner">${ch.owner?.slug || ""}</span>
+        </div>
+        <div class="nested-row-right">
+          ${badge}
+          <span class="nested-row-count">${countOf(ch) || ""}</span>
+        </div>`;
+      row.addEventListener("click", () => {
+        input.value = ch.slug;
+        loadChannel(ch.slug);
+      });
+      frag.appendChild(row);
+    });
+    nestedListEl.innerHTML = "";
+    nestedListEl.appendChild(frag);
   }
 
   function renderGrid() {
