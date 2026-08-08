@@ -386,6 +386,15 @@
   .clear-link:hover { color: #e85050; }
 
   /* ── Saved panel ── */
+  .saved-container {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 1px solid #1a1a1a;
+  }
+  .saved-container.visible { display: flex; }
+
   .saved-add {
     flex-shrink: 0;
     display: flex;
@@ -539,21 +548,6 @@
     border-top: 1px solid #1a1a1a;
   }
   .account-container.visible { display: flex; }
-
-  /* Everything scrolls except Surprise me, which stays pinned at the bottom. */
-  .account-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    scrollbar-width: none;
-  }
-  .account-scroll::-webkit-scrollbar { display: none; }
-
-  .section-label {
-    padding: 14px 12px 6px;
-    color: #555;
-  }
-  .section-label.hidden { display: none; }
 
   .account-connect,
   .account-connected {
@@ -748,6 +742,7 @@
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" id="density-icon"></svg>
   </button>
   <button class="nav-btn" id="recent-btn"  onclick="toggleRecent()">Recent</button>
+  <button class="nav-btn" id="saved-btn"   onclick="toggleSaved()">Saved</button>
   <button class="nav-btn" id="account-btn" onclick="toggleAccount()">Account</button>
 </div>
 
@@ -778,41 +773,38 @@
     </div>
   </div>
 
-  <!-- Account panel: connection, saved channels, and the account's own index -->
-  <div class="account-container" id="account-container">
-    <div class="account-scroll">
-      <div class="account-connect" id="account-connect">
-        <input type="password" class="saved-input" id="token-input" placeholder="Paste your Are.na token…" />
-        <button class="add-btn" id="connect-btn" onclick="connectToken()">Connect</button>
-      </div>
-      <div class="account-connected" id="account-connected" style="display:none">
-        <span class="account-user">Connected as <span id="account-username"></span></span>
-        <a class="clear-link" href="#" onclick="disconnectToken(); return false;">Disconnect</a>
-      </div>
-      <div class="saved-err" id="account-err"></div>
-      <div class="account-hint" id="account-hint">
-        Connect your account to browse your private channels.
-        <a class="hint-link" href="#" onclick="window.open('https://dev.are.na'); return false;">Get a token at dev.are.na ↗</a>
-      </div>
-
-      <div class="section-label">Saved</div>
-      <div class="saved-add">
-        <input type="text" class="saved-input" id="saved-input" placeholder="Paste a channel URL or slug…" />
-        <button class="add-btn" id="add-btn" onclick="addSavedChannel()">Add</button>
-      </div>
-      <div class="saved-err" id="saved-err"></div>
-      <div class="saved-list" id="saved-list"></div>
-
-      <div class="section-label" id="my-channels-label">Your channels</div>
-      <div class="saved-list" id="my-channels"></div>
+  <!-- Saved panel -->
+  <div class="saved-container" id="saved-container">
+    <div class="saved-add">
+      <input type="text" class="saved-input" id="saved-input" placeholder="Paste a channel URL or slug…" />
+      <button class="add-btn" id="add-btn" onclick="addSavedChannel()">Add</button>
     </div>
-
+    <div class="saved-err" id="saved-err"></div>
+    <div class="saved-list" id="saved-list"></div>
     <div class="panel-footer">
       <button class="surprise-btn" id="surprise-btn" onclick="runSurpriseMe()">
         <svg width="9" height="10" viewBox="0 0 40 45" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.7147 0.622782C18.9517 -0.207594 20.1285 -0.207594 20.3654 0.622783L24.0283 13.4576C24.1555 13.9031 24.6131 14.1673 25.0624 14.0547L38.0092 10.8094C38.8468 10.5994 39.4352 11.6186 38.8346 12.239L29.5507 21.8286C29.2285 22.1614 29.2285 22.6898 29.5507 23.0226L38.8346 32.6122C39.4352 33.2327 38.8468 34.2518 38.0092 34.0418L25.0624 30.7966C24.6131 30.6839 24.467 30.9482 24.0283 31.3936L20.3654 44.2285C20.1285 45.0588 18.9517 45.0588 18.7147 44.2285L15.0518 31.3936C14.9247 30.9482 14.467 30.6839 14.0177 30.7966L1.07094 34.0418C0.233327 34.2518 -0.355075 33.2327 0.245563 32.6122L9.52943 23.0226C9.85163 22.6898 9.85163 22.1614 9.52943 21.8286L0.245563 12.239C-0.355075 11.6186 0.233328 10.5994 1.07094 10.8094L14.0177 14.0547C14.467 14.1673 14.9247 13.9031 15.0518 13.4576L18.7147 0.622782Z" fill="white"/></svg>
         <span id="surprise-label">Surprise me</span>
       </button>
     </div>
+  </div>
+
+  <!-- Account panel -->
+  <div class="account-container" id="account-container">
+    <div class="account-connect" id="account-connect">
+      <input type="password" class="saved-input" id="token-input" placeholder="Paste your Are.na token…" />
+      <button class="add-btn" id="connect-btn" onclick="connectToken()">Connect</button>
+    </div>
+    <div class="account-connected" id="account-connected" style="display:none">
+      <span class="account-user">Connected as <span id="account-username"></span></span>
+      <a class="clear-link" href="#" onclick="disconnectToken(); return false;">Disconnect</a>
+    </div>
+    <div class="saved-err" id="account-err"></div>
+    <div class="account-hint" id="account-hint">
+      Connect your account to browse your private channels.
+      <a class="hint-link" href="#" onclick="window.open('https://dev.are.na'); return false;">Get a token at dev.are.na ↗</a>
+    </div>
+    <div class="saved-list" id="my-channels"></div>
   </div>
 
   <!-- About panel -->
@@ -875,6 +867,7 @@
   let placedIds       = new Set();
   let loadingMore     = false;
   let recentOpen      = false;
+  let savedOpen       = false;
   let aboutOpen       = false;
   let recents         = [];
   let savedChannels   = [];
@@ -946,7 +939,9 @@
   const recentWrap    = document.getElementById("recent-container");
   const recentListEl  = document.getElementById("recent-list");
   const recentBtn     = document.getElementById("recent-btn");
+  const savedWrap     = document.getElementById("saved-container");
   const savedListEl   = document.getElementById("saved-list");
+  const savedBtn      = document.getElementById("saved-btn");
   const savedInputEl  = document.getElementById("saved-input");
   const addBtnEl      = document.getElementById("add-btn");
   const savedErrEl    = document.getElementById("saved-err");
@@ -968,7 +963,6 @@
   const tokenInputEl    = document.getElementById("token-input");
   const connectBtnEl    = document.getElementById("connect-btn");
   const myChannelsEl    = document.getElementById("my-channels");
-  const myChannelsLabel = document.getElementById("my-channels-label");
   const nestedWrap      = document.getElementById("nested");
   const nestedListEl    = document.getElementById("nested-list");
   const nestedLabelEl   = document.getElementById("nested-label");
@@ -1077,13 +1071,14 @@
     hideLoading();
     gridWrap.style.display = "none";
     recentWrap.classList.remove("visible");
+    savedWrap.classList.remove("visible");
     aboutWrap.classList.remove("visible");
     accountWrap.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
   function updateByline() {
-    const showByStart = (!slug && !recentOpen && !accountOpen);
+    const showByStart = (!slug && !recentOpen && !savedOpen && !accountOpen);
     byline.style.display = (showByStart || aboutOpen) ? "" : "none";
   }
 
@@ -1124,8 +1119,9 @@
     renderTrail();
     clearSelection();
     hideAll(); hideError(); hideSearch();
-    recentOpen = false; aboutOpen = false; accountOpen = false;
+    recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
     recentBtn.classList.remove("active");
+    savedBtn.classList.remove("active");
     accountBtn.classList.remove("active");
     updateByline();
     updateDensityBtn();
@@ -1137,8 +1133,9 @@
 
   function setAboutOpen(val) {
     aboutOpen = val;
-    if (val) { recentOpen = false; accountOpen = false; }
+    if (val) { recentOpen = false; savedOpen = false; accountOpen = false; }
     recentBtn.classList.toggle("active", recentOpen);
+    savedBtn.classList.toggle("active", savedOpen);
     accountBtn.classList.toggle("active", accountOpen);
     if (val) {
       hideAll(); hideError(); hideSearch();
@@ -1158,10 +1155,11 @@
   function setRecentOpen(val) {
     recentOpen = val;
     if (val) {
-      aboutOpen = false; accountOpen = false;
+      savedOpen = false; aboutOpen = false; accountOpen = false;
       aboutWrap.classList.remove("visible");
     }
     recentBtn.classList.toggle("active", val);
+    savedBtn.classList.toggle("active", false);
     accountBtn.classList.toggle("active", accountOpen);
     if (val) {
       hideAll(); hideError();
@@ -1208,7 +1206,30 @@
   }
 
   // ── Saved channels ────────────────────────────────────────
-  // Saved lives inside the Account panel; it has no panel of its own.
+  function toggleSaved() { setSavedOpen(!savedOpen); }
+
+  function setSavedOpen(val) {
+    savedOpen = val;
+    if (val) {
+      recentOpen = false; aboutOpen = false; accountOpen = false;
+      aboutWrap.classList.remove("visible");
+    }
+    savedBtn.classList.toggle("active", val);
+    recentBtn.classList.toggle("active", false);
+    accountBtn.classList.toggle("active", accountOpen);
+    if (val) {
+      hideAll(); hideError();
+      savedWrap.classList.add("visible");
+      renderSaved();
+    } else {
+      savedWrap.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
+    updateByline();
+    updateDensityBtn();
+    updateSurpriseBtn();
+  }
+
   function renderSaved() {
     if (!savedChannels.length) {
       savedListEl.innerHTML = `<div class="panel-empty">Save channels to use<br>with Surprise me.</div>`;
@@ -1229,7 +1250,7 @@
         removeSavedChannel(ch.slug);
       });
       row.addEventListener("click", () => {
-        setAccountOpen(false);
+        setSavedOpen(false);
         loadChannel(ch.slug);
       });
       frag.appendChild(row);
@@ -1300,11 +1321,12 @@
   function setAccountOpen(val) {
     accountOpen = val;
     if (val) {
-      recentOpen = false; aboutOpen = false;
+      recentOpen = false; savedOpen = false; aboutOpen = false;
       aboutWrap.classList.remove("visible");
     }
     accountBtn.classList.toggle("active", val);
     recentBtn.classList.toggle("active", recentOpen);
+    savedBtn.classList.toggle("active", savedOpen);
     if (val) {
       hideAll(); hideError(); hideSearch();
       accountWrap.classList.add("visible");
@@ -1360,11 +1382,6 @@
     accountConned.style.display  = connected ? "" : "none";
     accountHintEl.classList.toggle("hidden", connected);
     renderAccountBtn();
-
-    // Saved works signed out — those are just channel slugs — so it shows
-    // either way. The account's own index only exists once connected.
-    renderSaved();
-    myChannelsLabel.classList.toggle("hidden", !connected);
     if (connected) {
       accountUserEl.textContent = connectedUser.slug;
       loadMyChannels();
@@ -2197,7 +2214,6 @@
       case "saved-loaded":
         savedChannels = msg.channels || [];
         updateSurpriseBtn();
-        if (accountOpen) renderSaved();   // storage can land after the panel opens
         break;
 
       case "density-loaded":
