@@ -80,16 +80,40 @@
   }
   .nav-btn:hover { color: #b2b2b2; }
   .nav-btn.active { color: #eee; }
-  /* A connected account reads as a subtle dot, not a second active state. */
-  .nav-btn.connected::after {
-    content: "";
-    display: inline-block;
-    width: 3px;
-    height: 3px;
-    margin-left: 4px;
+  /* Connected, the Account button becomes the avatar. The button keeps the
+     text button's 14px gap but drops to the circle's own size. */
+  .nav-btn.is-avatar {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    padding: 0;
     border-radius: 50%;
-    background: #b58b3a;
-    vertical-align: middle;
+    overflow: hidden;
+    /* Ring sits outside the circle so it never crops the image. */
+    box-shadow: 0 0 0 1px transparent;
+    transition: box-shadow 0.15s;
+  }
+  .nav-btn.is-avatar:hover   { box-shadow: 0 0 0 1px #555; }
+  .nav-btn.is-avatar.active  { box-shadow: 0 0 0 1px #eee; }
+
+  .avatar {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Sits under the image, so a missing or broken avatar reveals it. */
+  .avatar-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    color: #b2b2b2;
+    font-size: 8px;
+    letter-spacing: 0.02em;
   }
 
   /* ── Density toggle ── */
@@ -1319,18 +1343,51 @@
   function showAccountErr(msg) { accountErrEl.textContent = msg; accountErrEl.classList.add("visible"); }
   function hideAccountErr()    { accountErrEl.classList.remove("visible"); }
 
+  // Connected, the button is the account's avatar; signed out it stays the
+  // word "Account", since there's no face to show and nothing would suggest
+  // where to sign in. Are.na supplies initials for accounts with no avatar
+  // set, and those cover a broken image too.
+  function renderAccountBtn() {
+    const connected = !!token && !!connectedUser;
+    accountBtn.classList.toggle("is-avatar", connected);
+
+    if (!connected) {
+      accountBtn.textContent = "Account";
+      accountBtn.title = "Account";
+      return;
+    }
+
+    const label = connectedUser.name || connectedUser.slug;
+    accountBtn.title = label;
+    accountBtn.innerHTML = "";
+
+    const fallback = document.createElement("span");
+    fallback.className = "avatar avatar-initials";
+    fallback.textContent = connectedUser.initials || label.charAt(0).toUpperCase();
+    accountBtn.appendChild(fallback);
+
+    if (connectedUser.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = connectedUser.avatar;
+      img.alt = label;
+      img.onerror = () => img.remove();   // fall back to the initials beneath
+      accountBtn.appendChild(img);
+    }
+  }
+
   function renderAccount() {
     const connected = !!token && !!connectedUser;
     accountConnect.style.display = connected ? "none" : "";
     accountConned.style.display  = connected ? "" : "none";
     accountHintEl.classList.toggle("hidden", connected);
+    renderAccountBtn();
     if (connected) {
       accountUserEl.textContent = connectedUser.slug;
       loadMyChannels();
     } else {
       myChannelsEl.innerHTML = "";
     }
-    accountBtn.classList.toggle("connected", connected);
   }
 
   async function connectToken() {
@@ -1344,7 +1401,13 @@
       if (!res.ok) throw new Error("Invalid token — check and try again.");
       const user = await res.json();
       token = raw;
-      connectedUser = { slug: user.slug || user.username || "you", id: user.id, name: user.name || user.slug || "Account" };
+      connectedUser = {
+        slug:     user.slug || user.username || "you",
+        id:       user.id,
+        name:     user.name || user.slug || "Account",
+        avatar:   user.avatar || "",
+        initials: user.initials || "",
+      };
       myChannels = null;
       tokenInputEl.value = "";
       parent.postMessage({ pluginMessage: { type: "save-token", token: token } }, "*");
@@ -2059,8 +2122,14 @@
             .then((user) => {
               if (user) {
                 token = msg.token;
-                connectedUser = { slug: user.slug || user.username || "you", id: user.id, name: user.name || user.slug || "Account" };
-                accountBtn.classList.add("connected");
+                connectedUser = {
+                  slug:     user.slug || user.username || "you",
+                  id:       user.id,
+                  name:     user.name || user.slug || "Account",
+                  avatar:   user.avatar || "",
+                  initials: user.initials || "",
+                };
+                renderAccountBtn();
               }
             })
             .catch(() => {});

@@ -10,7 +10,8 @@
     "allowedDomains": [
       "https://api.are.na",
       "https://d2w9rnfcy7mm78.cloudfront.net",
-      "https://images.are.na"
+      "https://images.are.na",
+      "https://static.avatars.are.na"
     ]
   }
 }
