@@ -1766,20 +1766,48 @@
   }
 
   // ── Grid ──────────────────────────────────────────────────
-  // Accepts any non-Channel row carrying an image, not just class "Image".
-  // Most Are.na imagery is saved as Link blocks; the stricter v2 rule renders
-  // many channels — private ones especially — completely empty.
-  // v3 moves connected_at onto a `connection` object.
   // Channels nested inside a channel arrive as Channel rows in its contents.
   function filterNested(rows) {
     if (!Array.isArray(rows)) return [];
     return rows.filter((b) => b.type === "Channel");
   }
 
+  // Photos, GIFs and video only.
+  //
+  // Nearly every block type carries an `image`, but for most of them that
+  // image only stands in for something else: a Link's is a screenshot or
+  // og:image of a web page, an Attachment's is a generated cover for a PDF.
+  // Dropping those means a channel of saved web links reads as empty here,
+  // which is correct — there are no photos in it to place.
+  //
+  // What each type carries is what tells them apart: a Link has source.url,
+  // a file has attachment.content_type, a video has an embed object. A real
+  // image has none of them.
+  function isPlaceable(block) {
+    if (!block.image?.src) return false;
+
+    switch (block.type) {
+      case "Image":
+        return true;                                  // includes GIFs
+      case "Attachment": {
+        // Uploaded file — keep it only if the file itself is an image or video.
+        const ct = block.attachment?.content_type || "";
+        return ct.startsWith("image/") || ct.startsWith("video/");
+      }
+      case "Embed":
+        // Hosted video (Vimeo, YouTube). Figma can't place video, so this
+        // places the poster frame, which is what the grid already shows.
+        return (block.embed?.type || "").includes("video");
+      default:
+        return false;                                 // Link, Text, Channel
+    }
+  }
+
+  // v3 moves connected_at onto a `connection` object.
   function filterImages(rows) {
     if (!Array.isArray(rows)) return [];
     return rows
-      .filter((b) => b.type !== "Channel" && b.image?.src)
+      .filter(isPlaceable)
       .sort((a, b) => {
         const aT = new Date(a.connection?.connected_at || a.created_at || 0).getTime();
         const bT = new Date(b.connection?.connected_at || b.created_at || 0).getTime();
