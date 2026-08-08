@@ -1156,7 +1156,6 @@
         </div>
         <span class="channel-row-count">${ch.imageCount > 0 ? ch.imageCount + " images" : ""}</span>`;
       row.addEventListener("click", () => {
-        input.value = ch.slug;
         setRecentOpen(false);
         loadChannel(ch.slug);
       });
@@ -1217,7 +1216,6 @@
         removeSavedChannel(ch.slug);
       });
       row.addEventListener("click", () => {
-        input.value = ch.slug;
         setSavedOpen(false);
         loadChannel(ch.slug);
       });
@@ -1422,7 +1420,6 @@
           <span class="index-row-title">${ch.title || ch.slug}</span>
           <span class="index-row-count">${countOf(ch)}</span>`;
         row.addEventListener("click", () => {
-          input.value = ch.slug;
           setAccountOpen(false);
           loadChannel(ch.slug, { fromAccount: true });
         });
@@ -1552,7 +1549,6 @@
           <span class="channel-row-count">${countOf(ch) || ""}</span>`;
         row.addEventListener("mousedown", () => {
           hideSearch();
-          input.value = ch.slug;
           setRecentOpen(false);
           loadChannel(ch.slug);
         });
@@ -1644,6 +1640,12 @@
         trail = [{ slug: s, title }];
       }
       renderTrail();
+
+      // The breadcrumb names the open channel, so leaving the slug in the
+      // search field only buries the placeholder and has to be cleared before
+      // searching again. Cleared on success only — a failed load keeps what
+      // was typed so it can be corrected.
+      input.value = "";
 
       countEl.textContent = `${imgs.length} images`;
       infoBar.classList.add("visible");
@@ -1911,7 +1913,6 @@
           <span class="nested-row-count">${countOf(ch) || ""}</span>
         </div>`;
       row.addEventListener("click", () => {
-        input.value = ch.slug;
         loadChannel(ch.slug, { fromNested: true });
       });
       frag.appendChild(row);
