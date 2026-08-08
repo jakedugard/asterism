@@ -55,6 +55,16 @@
   input[type="text"]:focus { color: #eee; }
   input[type="text"]:focus::placeholder { color: #555; }
 
+  /* The search field is idle most of the time, so it sits back until
+     approached. flex:1 already stretches it across the middle of the header,
+     so its hover zone is most of the bar — near enough counts. The adjacent
+     logo counts too. Scoped to this field: the token and Saved inputs are
+     only ever on screen when they're the thing being used. */
+  #url-input { opacity: 0.55; transition: opacity 0.15s, color 0.15s; }
+  #url-input:hover,
+  #url-input:focus,
+  .header-logo:hover ~ #url-input { opacity: 1; }
+
   .nav-btn {
     flex-shrink: 0;
     margin-left: 14px;
