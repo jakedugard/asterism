@@ -89,12 +89,12 @@
     padding: 0;
     border-radius: 50%;
     overflow: hidden;
-    /* Ring sits outside the circle so it never crops the image. */
-    box-shadow: 0 0 0 1px transparent;
-    transition: box-shadow 0.15s;
+    /* Sits back when it isn't the open panel, like the search field. */
+    opacity: 0.65;
+    transition: opacity 0.15s;
   }
-  .nav-btn.is-avatar:hover   { box-shadow: 0 0 0 1px #555; }
-  .nav-btn.is-avatar.active  { box-shadow: 0 0 0 1px #eee; }
+  .nav-btn.is-avatar:hover,
+  .nav-btn.is-avatar.active { opacity: 1; }
 
   .avatar {
     position: absolute;
