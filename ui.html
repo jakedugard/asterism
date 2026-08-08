@@ -137,12 +137,7 @@
     padding: 0;
     border-radius: 50%;
     overflow: hidden;
-    /* Sits back when it isn't the open panel, like the search field. */
-    opacity: 0.65;
-    transition: opacity 0.15s;
   }
-  .nav-btn.is-avatar:hover,
-  .nav-btn.is-avatar.active { opacity: 1; }
 
   .avatar {
     position: absolute;
@@ -706,18 +701,108 @@
     max-width: 280px;
   }
 
+  /* ── Avatar menu ── */
+  /* Anchored to the header, which is already position: relative. Without a
+     positioned ancestor this would resolve against the viewport instead. */
+  .menu {
+    position: absolute;
+    top: calc(100% - 3px);
+    right: 12px;
+    z-index: 90;
+    display: none;
+    min-width: 168px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+  .menu.visible { display: block; }
+
+  .menu-identity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 11px 12px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu-identity:hover { background: var(--bg-hover); }
+
+  .menu-avatar {
+    position: relative;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: block;
+  }
+  .menu-identity-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .menu-name {
+    color: var(--text);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .menu-sub { color: var(--text-3); font-size: 11px; }
+
+  .menu-group { padding: 4px 0; }
+  .menu-item {
+    display: block;
+    width: 100%;
+    padding: 7px 12px;
+    background: none;
+    border: none;
+    color: var(--text-2);
+    font-size: 11px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+  }
+  .menu-item:hover { background: var(--bg-hover); color: var(--text); }
+
+  /* ── Settings panel ── */
+  .settings-container {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-top: 1px solid var(--line);
+  }
+  .settings-container::-webkit-scrollbar { display: none; }
+  .settings-container.visible { display: flex; }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 12px 0;
+  }
+  .setting-name { color: var(--text-2); }
+  .setting-note {
+    padding: 10px 12px;
+    color: var(--text-faint);
+    line-height: 1.5;
+  }
+
   /* ── Theme switch ── */
   .theme-switch {
     display: flex;
-    width: 160px;
-    margin-bottom: 18px;
+    flex-shrink: 0;
     border: 1px solid var(--line);
     border-radius: 3px;
     overflow: hidden;
   }
   .theme-opt {
-    flex: 1;
-    padding: 7px 0;
+    padding: 5px 10px;
     background: none;
     border: none;
     border-right: 1px solid var(--line);
@@ -756,18 +841,6 @@
   .about-link:hover { border-color: var(--line-strong); color: var(--text); }
 
   /* ── Byline ── */
-  #byline {
-    position: fixed;
-    bottom: 12px;
-    left: 12px;
-    color: var(--text-fainter);
-    font-size: 11px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: color 0.15s;
-    z-index: 70;
-  }
-  #byline:hover { color: var(--text-2); }
 
   /* ── Resize handle ── */
   .resize-handle {
@@ -819,8 +892,23 @@
   </button>
   <button class="nav-btn" id="recent-btn"  onclick="toggleRecent()">Recent</button>
   <button class="nav-btn" id="saved-btn"   onclick="toggleSaved()">Saved</button>
-  <button class="nav-btn" id="account-btn" onclick="toggleAccount()">Account</button>
+  <button class="nav-btn" id="account-btn" onclick="toggleAccountMenu(event)">Account</button>
+<!-- Avatar menu: identity on top, then the meta group — Are.na's own grouping -->
+  <div class="menu" id="account-menu">
+    <button class="menu-identity" id="menu-identity" onclick="openProfile()">
+      <span class="menu-avatar" id="menu-avatar"></span>
+      <span class="menu-identity-text">
+        <span class="menu-name" id="menu-name">Account</span>
+        <span class="menu-sub" id="menu-sub">View profile</span>
+      </span>
+    </button>
+    <div class="menu-group">
+      <button class="menu-item" onclick="openSettings()">Settings</button>
+      <button class="menu-item" onclick="openInfo()">Info</button>
+    </div>
+  </div>
 </div>
+
 
 <div class="channel-list"  id="search-results"></div>
 <div class="error-msg"     id="error-msg"></div>
@@ -830,7 +918,6 @@
   <button class="drop-btn" id="drop-btn" onclick="dropSelection()" style="display:none">Drop <span id="drop-count">0</span></button>
 </div>
 
-<a id="byline" href="#" onclick="toggleAbout(); return false;">Info</a>
 
 <div class="resize-handle" id="resize-handle" title="Drag to resize">
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -883,6 +970,20 @@
     <div class="saved-list" id="my-channels"></div>
   </div>
 
+  <!-- Settings panel -->
+  <div class="settings-container" id="settings-container">
+    <div class="section-label">Appearance</div>
+    <div class="setting-row">
+      <span class="setting-name">Theme</span>
+      <div class="theme-switch" id="theme-switch">
+        <button class="theme-opt" data-theme-opt="auto"  onclick="setTheme('auto')">Auto</button>
+        <button class="theme-opt" data-theme-opt="light" onclick="setTheme('light')">Light</button>
+        <button class="theme-opt" data-theme-opt="dark"  onclick="setTheme('dark')">Dark</button>
+      </div>
+    </div>
+    <div class="setting-note">Auto follows the light or dark setting in Figma.</div>
+  </div>
+
   <!-- About panel -->
   <div class="about-container" id="about-container">
     <div class="about-logo">
@@ -891,12 +992,6 @@
     <div class="about-title">Asterism</div>
     <div class="about-version">v1.4</div>
     <div class="about-tagline">An Are.na image browser for Figma.</div>
-
-    <div class="theme-switch" id="theme-switch">
-      <button class="theme-opt" data-theme-opt="auto"  onclick="setTheme('auto')">Auto</button>
-      <button class="theme-opt" data-theme-opt="light" onclick="setTheme('light')">Light</button>
-      <button class="theme-opt" data-theme-opt="dark"  onclick="setTheme('dark')">Dark</button>
-    </div>
 
     <div class="about-links">
       <a class="about-link" href="#" onclick="window.open('https://jakedugard.com'); return false;">Made by Jake Dugard</a>
@@ -958,8 +1053,10 @@
   let generatingMoodboard = false;
   let selectedBlocks      = [];   // multi-select state
   let accountOpen         = false;
+  let settingsOpen        = false;
+  let menuOpen            = false;
   let nestedChannels      = [];
-  let nestedCollapsed     = false;
+  let nestedCollapsed     = true;
   let trail               = [];   // breadcrumb path built by drilling into nested channels
   let token               = null;
   let connectedUser       = null;
@@ -1030,7 +1127,6 @@
   const savedErrEl    = document.getElementById("saved-err");
   const surpriseBtnEl = document.getElementById("surprise-btn");
   const surpriseLabel = document.getElementById("surprise-label");
-  const byline        = document.getElementById("byline");
   const dropBtnEl     = document.getElementById("drop-btn");
   const dropCountEl   = document.getElementById("drop-count");
   const resizeHandle  = document.getElementById("resize-handle");
@@ -1046,6 +1142,11 @@
   const tokenInputEl    = document.getElementById("token-input");
   const connectBtnEl    = document.getElementById("connect-btn");
   const myChannelsEl    = document.getElementById("my-channels");
+  const menuEl          = document.getElementById("account-menu");
+  const menuAvatarEl    = document.getElementById("menu-avatar");
+  const menuNameEl      = document.getElementById("menu-name");
+  const menuSubEl       = document.getElementById("menu-sub");
+  const settingsWrap    = document.getElementById("settings-container");
   const nestedWrap      = document.getElementById("nested");
   const nestedListEl    = document.getElementById("nested-list");
   const nestedLabelEl   = document.getElementById("nested-label");
@@ -1187,13 +1288,10 @@
     savedWrap.classList.remove("visible");
     aboutWrap.classList.remove("visible");
     accountWrap.classList.remove("visible");
+    settingsWrap.classList.remove("visible");
     infoBar.classList.remove("visible");
   }
 
-  function updateByline() {
-    const showByStart = (!slug && !recentOpen && !savedOpen && !accountOpen);
-    byline.style.display = (showByStart || aboutOpen) ? "" : "none";
-  }
 
   function updateDensityBtn() {
     densityBtn.style.display = (gridWrap.style.display === "block") ? "" : "none";
@@ -1232,11 +1330,11 @@
     renderTrail();
     clearSelection();
     hideAll(); hideError(); hideSearch();
-    recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
+    recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false; settingsOpen = false;
+    setMenuOpen(false);
     recentBtn.classList.remove("active");
     savedBtn.classList.remove("active");
     accountBtn.classList.remove("active");
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
   }
@@ -1246,7 +1344,7 @@
 
   function setAboutOpen(val) {
     aboutOpen = val;
-    if (val) { recentOpen = false; savedOpen = false; accountOpen = false; }
+    if (val) { recentOpen = false; savedOpen = false; accountOpen = false; settingsOpen = false; }
     recentBtn.classList.toggle("active", recentOpen);
     savedBtn.classList.toggle("active", savedOpen);
     accountBtn.classList.toggle("active", accountOpen);
@@ -1257,7 +1355,6 @@
       aboutWrap.classList.remove("visible");
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
   }
@@ -1268,7 +1365,7 @@
   function setRecentOpen(val) {
     recentOpen = val;
     if (val) {
-      savedOpen = false; aboutOpen = false; accountOpen = false;
+      savedOpen = false; aboutOpen = false; accountOpen = false; settingsOpen = false;
       aboutWrap.classList.remove("visible");
     }
     recentBtn.classList.toggle("active", val);
@@ -1282,7 +1379,6 @@
       recentWrap.classList.remove("visible");
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
   }
@@ -1324,7 +1420,7 @@
   function setSavedOpen(val) {
     savedOpen = val;
     if (val) {
-      recentOpen = false; aboutOpen = false; accountOpen = false;
+      recentOpen = false; aboutOpen = false; accountOpen = false; settingsOpen = false;
       aboutWrap.classList.remove("visible");
     }
     savedBtn.classList.toggle("active", val);
@@ -1338,7 +1434,6 @@
       savedWrap.classList.remove("visible");
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
   }
@@ -1429,12 +1524,78 @@
   });
 
   // ── Account ───────────────────────────────────────────────
+  // ── Avatar menu ───────────────────────────────────────────
+  function toggleAccountMenu(e) {
+    if (e) e.stopPropagation();   // the document listener would close it again
+    setMenuOpen(!menuOpen);
+  }
+
+  function setMenuOpen(val) {
+    menuOpen = val;
+    menuEl.classList.toggle("visible", val);
+    accountBtn.classList.toggle("active", val);
+    if (val) renderMenuIdentity();
+  }
+
+  function renderMenuIdentity() {
+    const connected = !!token && !!connectedUser;
+    menuNameEl.textContent = connected ? (connectedUser.name || connectedUser.slug) : "Account";
+    menuSubEl.textContent  = connected ? "View profile" : "Connect your Are.na account";
+
+    menuAvatarEl.innerHTML = "";
+    if (!connected) { menuAvatarEl.style.display = "none"; return; }
+    menuAvatarEl.style.display = "";
+
+    const fallback = document.createElement("span");
+    fallback.className = "avatar avatar-initials";
+    fallback.textContent = connectedUser.initials || (connectedUser.name || "?").charAt(0).toUpperCase();
+    menuAvatarEl.appendChild(fallback);
+
+    if (connectedUser.avatar) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = connectedUser.avatar;
+      img.alt = "";
+      img.onerror = () => img.remove();
+      menuAvatarEl.appendChild(img);
+    }
+  }
+
+  function openProfile()  { setMenuOpen(false); setAccountOpen(true); }
+  function openSettings() { setMenuOpen(false); setSettingsOpen(true); }
+  function openInfo()     { setMenuOpen(false); setAboutOpen(true); }
+
+  document.addEventListener("click", (e) => {
+    if (menuOpen && !menuEl.contains(e.target) && e.target !== accountBtn) setMenuOpen(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && menuOpen) setMenuOpen(false);
+  });
+
+  // ── Settings ──────────────────────────────────────────────
+  function setSettingsOpen(val) {
+    settingsOpen = val;
+    if (val) {
+      recentOpen = false; savedOpen = false; aboutOpen = false; accountOpen = false;
+      hideAll(); hideError(); hideSearch();
+      settingsWrap.classList.add("visible");
+      applyTheme();
+    } else {
+      settingsWrap.classList.remove("visible");
+      if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
+    }
+    recentBtn.classList.toggle("active", recentOpen);
+    savedBtn.classList.toggle("active", savedOpen);
+    updateDensityBtn();
+    updateSurpriseBtn();
+  }
+
   function toggleAccount() { setAccountOpen(!accountOpen); }
 
   function setAccountOpen(val) {
     accountOpen = val;
     if (val) {
-      recentOpen = false; savedOpen = false; aboutOpen = false;
+      recentOpen = false; savedOpen = false; aboutOpen = false; settingsOpen = false;
       aboutWrap.classList.remove("visible");
     }
     accountBtn.classList.toggle("active", val);
@@ -1448,7 +1609,6 @@
       accountWrap.classList.remove("visible");
       if (slug) { infoBar.classList.add("visible"); gridWrap.style.display = "block"; }
     }
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
   }
@@ -1848,7 +2008,6 @@
     gridEl.innerHTML = "";
     nestedChannels = [];
     renderNested();
-    updateByline();
     updateDensityBtn();
     updateSurpriseBtn();
 
@@ -1880,7 +2039,10 @@
       const imgs  = filterImages(rows);
 
       const expectedNested = data.counts?.channels || 0;
-      nestedCollapsed = expectedNested > NESTED_AUTO_EXPAND;
+      // Always starts closed. Expanding is about the channel you're in, so
+      // carrying that state into the next one just puts a list you didn't ask
+      // for above the images.
+      nestedCollapsed = true;
       nestedChannels  = [];
       mergeNested(filterNested(rows));
       scanNested(s, expectedNested);   // background; images render first
@@ -1923,7 +2085,6 @@
       hideLoading();
       showError(err.message);
       slug = "";
-      updateByline();
       updateDensityBtn();
       updateSurpriseBtn();
     }
@@ -2122,10 +2283,6 @@
   }
 
   // ── Nested channels ───────────────────────────────────────
-  // Expanded when there are few enough to scan at a glance; past that the
-  // list would push the images most of a screen down, so it starts collapsed.
-  const NESTED_AUTO_EXPAND = 6;
-
   function toggleNested() {
     nestedCollapsed = !nestedCollapsed;
     nestedWrap.classList.toggle("collapsed", nestedCollapsed);
@@ -2400,7 +2557,6 @@
   // ── Init ──────────────────────────────────────────────────
   applyDensity("3");
   applyTheme();
-  updateByline();
   updateDensityBtn();
   updateSurpriseBtn();
 </script>
