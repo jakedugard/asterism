@@ -808,36 +808,36 @@
   .settings-container::-webkit-scrollbar { display: none; }
   .settings-container.visible { display: flex; }
 
-  /* Same label treatment as the account index's letter headings. */
+  /* A setting is its heading, its control and the sentence explaining it —
+     one thing. Rules divide the groups; nothing divides a group internally,
+     so the note reads as attached to the control above it rather than as the
+     start of whatever comes next. */
+  .setting-group {
+    flex-shrink: 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .setting-group:last-child { border-bottom: none; }
+
   .section-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 12px 6px;
+    padding: 16px 12px 10px;
     color: var(--text-faint);
   }
-  .section-label::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--line);
-  }
 
-  /* 44px control row with 12px gutters, matching the Saved and Account rows. */
+  /* 12px gutters, matching the Saved and Account rows. */
   .setting-row {
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     padding: 0 12px;
-    height: 44px;
-    border-bottom: 1px solid var(--line);
+    min-height: 28px;
   }
   .setting-name { color: var(--text-2); }
 
   .setting-note {
-    padding: 12px;
+    padding: 6px 12px 0;
+    max-width: 300px;      /* wraps before the control column */
     color: var(--text-faint);
     line-height: 1.5;
   }
@@ -1021,26 +1021,30 @@
 
   <!-- Settings panel -->
   <div class="settings-container" id="settings-container">
-    <div class="section-label">Appearance</div>
-    <div class="setting-row">
-      <span class="setting-name">Theme</span>
-      <div class="theme-switch" id="theme-switch">
-        <button class="theme-opt" data-theme-opt="auto"  onclick="setTheme('auto')">Auto</button>
-        <button class="theme-opt" data-theme-opt="light" onclick="setTheme('light')">Light</button>
-        <button class="theme-opt" data-theme-opt="dark"  onclick="setTheme('dark')">Dark</button>
+    <div class="setting-group">
+      <div class="section-label">Appearance</div>
+      <div class="setting-row">
+        <span class="setting-name">Theme</span>
+        <div class="theme-switch" id="theme-switch">
+          <button class="theme-opt" data-theme-opt="auto"  onclick="setTheme('auto')">Auto</button>
+          <button class="theme-opt" data-theme-opt="light" onclick="setTheme('light')">Light</button>
+          <button class="theme-opt" data-theme-opt="dark"  onclick="setTheme('dark')">Dark</button>
+        </div>
       </div>
+      <div class="setting-note">Auto follows the light or dark setting in Figma.</div>
     </div>
-    <div class="setting-note">Auto follows the light or dark setting in Figma.</div>
 
-    <div class="section-label">Content</div>
-    <div class="setting-row">
-      <span class="setting-name">NSFW channels</span>
-      <div class="theme-switch" id="nsfw-switch">
-        <button class="theme-opt" data-nsfw-opt="show" onclick="setHideNsfw(false)">Show</button>
-        <button class="theme-opt" data-nsfw-opt="hide" onclick="setHideNsfw(true)">Hide</button>
+    <div class="setting-group">
+      <div class="section-label">Content</div>
+      <div class="setting-row">
+        <span class="setting-name">NSFW channels</span>
+        <div class="theme-switch" id="nsfw-switch">
+          <button class="theme-opt" data-nsfw-opt="show" onclick="setHideNsfw(false)">Show</button>
+          <button class="theme-opt" data-nsfw-opt="hide" onclick="setHideNsfw(true)">Hide</button>
+        </div>
       </div>
+      <div class="setting-note">Channels the owner marked NSFW are tagged in search and channel lists. Hide keeps them out of those lists, though pasting a channel's URL still opens it.</div>
     </div>
-    <div class="setting-note">Channels their owner marked NSFW are tagged in search and channel lists. Hide leaves them out entirely. Opening one by URL always works.</div>
   </div>
 
   <!-- About panel -->
