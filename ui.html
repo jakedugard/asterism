@@ -837,7 +837,10 @@
     line-height: 1.5;
   }
 
-  /* ── Theme switch ── */
+  /* ── Segmented switch ── */
+  /* Named for the theme setting it was built for, now shared with NSFW.
+     Anything reading these buttons must select on the data attribute; the
+     class alone spans both switches. */
   .theme-switch {
     display: flex;
     flex-shrink: 0;
@@ -1236,7 +1239,10 @@
   function applyTheme() {
     const resolved = themePref === "auto" ? (figmaIsLight() ? "light" : "dark") : themePref;
     document.documentElement.setAttribute("data-theme", resolved);
-    document.querySelectorAll(".theme-opt").forEach((b) => {
+    // Scoped by data attribute, not by .theme-opt: the NSFW switch reuses
+    // that class for its styling, and a class-wide query clears its selection
+    // every time the theme is applied.
+    document.querySelectorAll("[data-theme-opt]").forEach((b) => {
       b.classList.toggle("selected", b.dataset.themeOpt === themePref);
     });
   }
