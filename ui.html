@@ -664,6 +664,35 @@
   .row-private .nested-row-title,
   .row-private .index-row-title { color: var(--red); }
 
+  /* Titles ellipse, so a tag appended inside one gets eaten on a long title.
+     Pairing them on a shared line lets the title truncate around the tag. */
+  .row-title-line {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+  .row-title-line > :first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* NSFW can't borrow the private treatment — red is already spoken for, and
+     a channel can be both. A quiet outlined tag reads as a label rather than
+     a warning, which is the right volume for something you asked to see. */
+  .nsfw-tag {
+    flex-shrink: 0;
+    padding: 1px 4px;
+    border: 1px solid var(--line-strong, var(--line));
+    border-radius: 2px;
+    color: var(--text-faint);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+  }
+
   /* ── About panel ── */
   .about-container {
     position: fixed;
@@ -1002,6 +1031,16 @@
       </div>
     </div>
     <div class="setting-note">Auto follows the light or dark setting in Figma.</div>
+
+    <div class="section-label">Content</div>
+    <div class="setting-row">
+      <span class="setting-name">NSFW channels</span>
+      <div class="theme-switch" id="nsfw-switch">
+        <button class="theme-opt" data-nsfw-opt="show" onclick="setHideNsfw(false)">Show</button>
+        <button class="theme-opt" data-nsfw-opt="hide" onclick="setHideNsfw(true)">Hide</button>
+      </div>
+    </div>
+    <div class="setting-note">Channels their owner marked NSFW are tagged in search and channel lists. Hide leaves them out entirely. Opening one by URL always works.</div>
   </div>
 
   <!-- About panel -->
@@ -1081,6 +1120,7 @@
   let token               = null;
   let connectedUser       = null;
   let myChannels          = null; // cached channel list for the connected account
+  let hideNsfw            = false; // Settings: drop NSFW-marked channels from lists
 
   // ── Auth ──────────────────────────────────────────────────
   function authFetch(url, options) {
@@ -1208,6 +1248,24 @@
     themePref = pref;
     applyTheme();
     parent.postMessage({ pluginMessage: { type: "save-theme", theme: pref } }, "*");
+  }
+
+  // ── NSFW preference ───────────────────────────────────────
+  function applyHideNsfw() {
+    document.querySelectorAll("[data-nsfw-opt]").forEach((b) => {
+      b.classList.toggle("selected", (b.dataset.nsfwOpt === "hide") === hideNsfw);
+    });
+  }
+
+  function setHideNsfw(val) {
+    hideNsfw = val;
+    applyHideNsfw();
+    parent.postMessage({ pluginMessage: { type: "save-hide-nsfw", hide: val } }, "*");
+
+    // Redraw whatever list is on screen so the change lands immediately
+    // rather than on the next search.
+    renderNested();
+    if (accountOpen && myChannels) renderChannelIndex(myChannels);
   }
 
   // Figma swaps the class on <html> when the user changes their editor theme;
@@ -1803,6 +1861,56 @@
 
   function hasMedia(ch) { return !emptyChannels.has(ch.slug); }
 
+  // ── NSFW flagging ─────────────────────────────────────────
+  // Are.na lets an owner mark a channel NSFW, but v3 doesn't carry the flag:
+  // it's absent from search rows, from /v3/channels/:slug, and metadata is
+  // null. Only v2 has it, as `nsfw?`, so each channel needs a second lookup.
+  //
+  // This only matters signed in. v2's anonymous search drops flagged channels
+  // before they reach us, and v2 ignores our token, so a signed-out session
+  // can't surface one to begin with — probing it would be 20 requests for 20
+  // guaranteed falses.
+  //
+  // `page=9999` asks for a page of contents past the end, which is the
+  // cheapest way to get the channel object alone: ~2.5KB against ~5.5KB for
+  // page 1, and no blocks to parse.
+  const API_V2_CHANNELS = "https://api.are.na/v2/channels";
+  const nsfwChannels = new Set();   // slugs the owner has marked NSFW
+  const nsfwProbed   = new Set();
+
+  async function probeNsfw(slug) {
+    if (nsfwProbed.has(slug)) return;
+    try {
+      const res = await fetch(`${API_V2_CHANNELS}/${slug}?per=1&page=9999`);
+      if (!res.ok) return;            // can't tell — leave it unmarked
+      const data = await res.json();
+      nsfwProbed.add(slug);
+      if (data["nsfw?"]) nsfwChannels.add(slug);
+    } catch (_) { /* v2 is on its way out; losing the badge beats breaking */ }
+  }
+
+  // Same bounded concurrency as probeChannels, for the same reason.
+  async function probeNsfwList(list, onProgress) {
+    if (!token) return;
+    const pending = list.filter((c) => !nsfwProbed.has(c.slug));
+    if (!pending.length) return;
+    let i = 0;
+    await Promise.all(Array.from({ length: Math.min(6, pending.length) }, async () => {
+      while (i < pending.length) {
+        await probeNsfw(pending[i++].slug);
+      }
+    }));
+    if (onProgress) onProgress();
+  }
+
+  function isNsfw(ch) { return nsfwChannels.has(ch.slug); }
+
+  // Marked channels stay listed by default — a tag says what something is,
+  // where silently dropping it just looks like search missing things again.
+  function passesNsfw(ch) { return !hideNsfw || !isNsfw(ch); }
+
+  function nsfwTag(ch) { return isNsfw(ch) ? `<span class="nsfw-tag">NSFW</span>` : ""; }
+
   // Heading a title sorts under. Anything not A–Z groups together under #,
   // which is where localeCompare puts them anyway.
   function indexLetter(title) {
@@ -1811,7 +1919,7 @@
   }
 
   function renderChannelIndex(channels) {
-    const visible = channels.filter(hasMedia);
+    const visible = channels.filter(hasMedia).filter(passesNsfw);
     if (!visible.length) {
       myChannelsEl.innerHTML = `<div class="panel-empty">No channels with images.</div>`;
       return;
@@ -1839,7 +1947,10 @@
       const row = document.createElement("div");
       row.className = "index-row" + (ch.visibility === "private" ? " row-private" : "");
       row.innerHTML = `
-        <span class="index-row-title">${ch.title || ch.slug}</span>
+        <div class="row-title-line">
+          <span class="index-row-title">${ch.title || ch.slug}</span>
+          ${nsfwTag(ch)}
+        </div>
         <span class="index-row-count">${countOf(ch)}</span>`;
       row.addEventListener("click", () => {
         setAccountOpen(false);
@@ -1864,6 +1975,9 @@
       // Draw the full list first so the panel is usable immediately, then
       // look inside each channel and redraw without the ones holding no media.
       renderChannelIndex(channels);
+      probeNsfwList(channels, () => {
+        if (accountOpen) renderChannelIndex(channels);
+      });
       await probeChannels(channels, () => {
         if (accountOpen) renderChannelIndex(channels);
       });
@@ -1985,27 +2099,47 @@
       // the row as a size cue; they don't decide the order.
       if (!channels.length) { hideSearch(); return; }
 
-      const frag = document.createDocumentFragment();
-      channels.forEach((ch) => {
-        const row = document.createElement("div");
-        row.className = "channel-row";
-        row.innerHTML = `
-          <div class="channel-row-left">
-            <span class="channel-row-title">${ch.title || ch.slug}</span>
-            <span class="channel-row-owner">${ch.owner?.slug || ""}</span>
-          </div>
-          <span class="channel-row-count">${countOf(ch) || ""}</span>`;
-        row.addEventListener("mousedown", () => {
-          hideSearch();
-          setRecentOpen(false);
-          loadChannel(ch.slug);
-        });
-        frag.appendChild(row);
+      renderSearchRows(channels);
+
+      // Drawn first, tagged a beat later. The NSFW flag costs one request per
+      // result, and holding twenty relevant channels back for a second to
+      // label the occasional one is the worse trade. Guarded on the query
+      // still being current so a slow probe can't repaint a stale list.
+      probeNsfwList(channels, () => {
+        if (input.value.trim() === q && searchEl.classList.contains("visible")) {
+          renderSearchRows(channels);
+        }
       });
-      searchEl.innerHTML = "";
-      searchEl.appendChild(frag);
-      searchEl.classList.add("visible");
     } catch (_) { hideSearch(); }
+  }
+
+  function renderSearchRows(channels) {
+    const visible = channels.filter(passesNsfw);
+    if (!visible.length) { hideSearch(); return; }
+
+    const frag = document.createDocumentFragment();
+    visible.forEach((ch) => {
+      const row = document.createElement("div");
+      row.className = "channel-row";
+      row.innerHTML = `
+        <div class="channel-row-left">
+          <div class="row-title-line">
+            <span class="channel-row-title">${ch.title || ch.slug}</span>
+            ${nsfwTag(ch)}
+          </div>
+          <span class="channel-row-owner">${ch.owner?.slug || ""}</span>
+        </div>
+        <span class="channel-row-count">${countOf(ch) || ""}</span>`;
+      row.addEventListener("mousedown", () => {
+        hideSearch();
+        setRecentOpen(false);
+        loadChannel(ch.slug);
+      });
+      frag.appendChild(row);
+    });
+    searchEl.innerHTML = "";
+    searchEl.appendChild(frag);
+    searchEl.classList.add("visible");
   }
 
   // ── URL parsing ───────────────────────────────────────────
@@ -2090,6 +2224,11 @@
         trail = [{ slug: s, title }];
       }
       renderTrail();
+
+      // One lookup for the channel you're actually in, and unlike the list
+      // probes this one runs signed out too: pasting a URL is the one way to
+      // reach a flagged channel without an account, and it's a single request.
+      probeNsfw(s).then(() => { if (slug === s) renderTrail(); });
 
       // The breadcrumb names the open channel, so leaving the slug in the
       // search field only buries the placeholder and has to be cleared before
@@ -2299,6 +2438,12 @@
         cur.className = "crumb current";
         cur.textContent = crumb.title;
         frag.appendChild(cur);
+        if (nsfwChannels.has(slug)) {
+          const tag = document.createElement("span");
+          tag.className = "nsfw-tag";
+          tag.textContent = "NSFW";
+          frag.appendChild(tag);
+        }
       } else {
         const btn = document.createElement("button");
         btn.className = "crumb";
@@ -2327,6 +2472,7 @@
     // Look inside the new ones and redraw without any that hold no media.
     const forSlug = slug;
     probeChannels(fresh, () => { if (slug === forSlug) renderNested(); });
+    probeNsfwList(fresh, () => { if (slug === forSlug) renderNested(); });
   }
 
   // The API has no channels-only filter — `type=Channel` is accepted but
@@ -2365,7 +2511,7 @@
   }
 
   function renderNested() {
-    const visible = nestedChannels.filter(hasMedia);
+    const visible = nestedChannels.filter(hasMedia).filter(passesNsfw);
     if (!visible.length) {
       nestedWrap.style.display = "none";
       nestedListEl.innerHTML = "";
@@ -2384,7 +2530,10 @@
       row.className = "nested-row" + (ch.visibility === "private" ? " row-private" : "");
       row.innerHTML = `
         <div class="nested-row-left">
-          <span class="nested-row-title">${ch.title || ch.slug}</span>
+          <div class="row-title-line">
+            <span class="nested-row-title">${ch.title || ch.slug}</span>
+            ${nsfwTag(ch)}
+          </div>
           <span class="nested-row-owner">${ch.owner?.slug || ""}</span>
         </div>
         <div class="nested-row-right">
@@ -2522,6 +2671,11 @@
 
       case "density-loaded":
         applyDensity(msg.density || "default");
+        break;
+
+      case "hide-nsfw-loaded":
+        hideNsfw = !!msg.hide;
+        applyHideNsfw();
         break;
 
       case "token-loaded":

@@ -10,18 +10,20 @@ const MIN_HEIGHT     = 400;
 figma.showUI(__html__, { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, themeColors: true });
 
 (async () => {
-  const [recents, channels, density, token, theme] = await Promise.all([
+  const [recents, channels, density, token, theme, hideNsfw] = await Promise.all([
     figma.clientStorage.getAsync("arena-recents"),
     figma.clientStorage.getAsync("arena-saved-channels"),
     figma.clientStorage.getAsync("arena-density"),
     figma.clientStorage.getAsync("arena-token"),
     figma.clientStorage.getAsync("arena-theme"),
+    figma.clientStorage.getAsync("arena-hide-nsfw"),
   ]);
-  figma.ui.postMessage({ type: "recents-loaded", recents: recents || [] });
-  figma.ui.postMessage({ type: "saved-loaded",   channels: channels || [] });
-  figma.ui.postMessage({ type: "density-loaded", density: density || "3" });
-  figma.ui.postMessage({ type: "token-loaded",   token: token || null });
-  figma.ui.postMessage({ type: "theme-loaded",   theme: theme || "auto" });
+  figma.ui.postMessage({ type: "recents-loaded",   recents: recents || [] });
+  figma.ui.postMessage({ type: "saved-loaded",     channels: channels || [] });
+  figma.ui.postMessage({ type: "density-loaded",   density: density || "3" });
+  figma.ui.postMessage({ type: "token-loaded",     token: token || null });
+  figma.ui.postMessage({ type: "theme-loaded",     theme: theme || "auto" });
+  figma.ui.postMessage({ type: "hide-nsfw-loaded", hide: hideNsfw === true });
 })();
 
 figma.ui.onmessage = async (msg) => {
@@ -44,6 +46,12 @@ figma.ui.onmessage = async (msg) => {
   // ── Theme preference ──────────────────────────────────────
   if (msg.type === "save-theme") {
     await figma.clientStorage.setAsync("arena-theme", msg.theme);
+    return;
+  }
+
+  // ── NSFW preference ───────────────────────────────────────
+  if (msg.type === "save-hide-nsfw") {
+    await figma.clientStorage.setAsync("arena-hide-nsfw", msg.hide === true);
     return;
   }
 
