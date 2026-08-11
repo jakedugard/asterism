@@ -814,15 +814,10 @@
      start of whatever comes next. */
   .setting-group {
     flex-shrink: 0;
-    padding-bottom: 20px;
+    padding: 16px 0 20px;
     border-bottom: 1px solid var(--line);
   }
   .setting-group:last-child { border-bottom: none; }
-
-  .section-label {
-    padding: 16px 12px 10px;
-    color: var(--text-faint);
-  }
 
   /* 12px gutters, matching the Saved and Account rows. */
   .setting-row {
@@ -836,7 +831,7 @@
   .setting-name { color: var(--text-2); }
 
   .setting-note {
-    padding: 6px 12px 0;
+    padding: 12px 12px 0;
     max-width: 300px;      /* wraps before the control column */
     color: var(--text-faint);
     line-height: 1.5;
@@ -1022,7 +1017,6 @@
   <!-- Settings panel -->
   <div class="settings-container" id="settings-container">
     <div class="setting-group">
-      <div class="section-label">Appearance</div>
       <div class="setting-row">
         <span class="setting-name">Theme</span>
         <div class="theme-switch" id="theme-switch">
@@ -1035,7 +1029,6 @@
     </div>
 
     <div class="setting-group">
-      <div class="section-label">Content</div>
       <div class="setting-row">
         <span class="setting-name">NSFW channels</span>
         <div class="theme-switch" id="nsfw-switch">
