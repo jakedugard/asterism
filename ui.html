@@ -1965,15 +1965,24 @@
     try {
       // Signed in, search v3 so private channels can surface; otherwise v2,
       // which is the only search that answers anonymously.
-      const raw = token
+      //
+      // The two versions spell the search term differently: v3 wants `query`,
+      // v2 wants `q`. v3 doesn't reject the wrong one, it drops it — sending
+      // `q` returns every channel on Are.na ordered by most recently updated,
+      // identical for every term you type, which reads as a search that
+      // ignores you rather than one that failed.
+      const channels = token
         ? rowsOf(await (await authFetch(
-            `${API}/search?q=${encodeURIComponent(q)}&type=Channel&per=20`
+            `${API}/search?query=${encodeURIComponent(q)}&type=Channel&per=20`
           )).json()).filter((r) => r.type === "Channel")
         : normalizeV2Channels(await (await fetch(
             `${API_V2_SEARCH}?q=${encodeURIComponent(q)}&per=20`
           )).json());
 
-      const channels = raw.slice().sort((a, b) => countOf(b) - countOf(a));
+      // Rendered in the order the API returned. Both versions rank by
+      // relevance, and re-sorting by block count buries an exact title match
+      // under whatever large channel merely mentions the term. Counts stay on
+      // the row as a size cue; they don't decide the order.
       if (!channels.length) { hideSearch(); return; }
 
       const frag = document.createDocumentFragment();
