@@ -12,6 +12,7 @@ An Are.na image browser for Figma. Search any channel, browse its images, and pl
 - **Your channels** — connect an Are.na account to browse everything you can see, private channels included
 - **Channels inside channels** — drill into sub-channels, with a breadcrumb back
 - **Light and dark** — follows your Figma theme, or pick one in Settings
+- **NSFW tagging** — channels their owner marked NSFW are tagged in search and channel lists, and can be hidden entirely in Settings
 - Browse images in a grid with infinite scroll
 - Click any image to place it on the Figma canvas at its correct aspect ratio
 - **Recent** — channels you browse are saved automatically
@@ -59,6 +60,13 @@ An Are.na image browser for Figma. Search any channel, browse its images, and pl
 - Surprise me — 4×4 moodboard from a random sample of your saved channels
 - Find similar — co-occurrence moodboard from any image in a channel
 - Moodboard frames use auto layout with hugged height
+
+**v2.1 — Search relevance + NSFW tagging**
+- Search returns what you asked for — v3 spells the search term `query`, and sending `q` had been returning all of Are.na ordered by most recently updated
+- Results keep the API's relevance order instead of being re-sorted by block count
+- Channels their owner marked NSFW are tagged in search results, channel lists and the open channel
+- Settings — Show or Hide NSFW channels, defaulting to Show. Private channels can't be tagged; Are.na only exposes the flag on v2, which won't authenticate
+- Settings panel groups each setting with its description
 
 **v2.0 — Are.na accounts, private channels, light mode**
 - Connect an Are.na account to browse private channels

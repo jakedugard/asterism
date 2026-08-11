@@ -1049,7 +1049,7 @@
       <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M75.8216 47.4384C76.1029 46.4526 77.5001 46.4526 77.7814 47.4384L82.1301 62.6763C82.281 63.2051 82.8243 63.5188 83.3578 63.3851L98.7285 59.5322C99.723 59.283 100.422 60.4929 99.7085 61.2295L88.6864 72.6145C88.3039 73.0096 88.3039 73.637 88.6864 74.0321L99.7085 85.4172C100.422 86.1537 99.723 87.3637 98.7285 87.1144L83.3578 83.2616C82.8243 83.1278 82.281 83.4415 82.1301 83.9704L77.7814 99.2082C77.5001 100.194 76.1029 100.194 75.8216 99.2082L71.4729 83.9704C71.322 83.4415 70.7787 83.1278 70.2452 83.2616L54.8745 87.1144C53.88 87.3637 53.1815 86.1537 53.8946 85.4172L64.9166 74.0321C65.2991 73.637 65.2991 73.0096 64.9166 72.6145L53.8946 61.2295C53.1815 60.4929 53.88 59.283 54.8745 59.5322L70.2452 63.3851C70.7787 63.5188 71.322 63.2051 71.4729 62.6763L75.8216 47.4384Z"/><path d="M22.2186 47.4384C22.4999 46.4526 23.8971 46.4526 24.1784 47.4384L28.5271 62.6763C28.678 63.2051 29.2213 63.5188 29.7548 63.3851L45.1255 59.5322C46.12 59.283 46.8185 60.4929 46.1054 61.2295L35.0834 72.6145C34.7009 73.0096 34.7009 73.637 35.0834 74.0321L46.1054 85.4172C46.8185 86.1537 46.12 87.3637 45.1255 87.1144L29.7548 83.2616C29.2213 83.1278 28.678 83.4415 28.5271 83.9704L24.1784 99.2082C23.8971 100.194 22.4999 100.194 22.2186 99.2082L17.8699 83.9704C17.719 83.4415 17.1756 83.1278 16.6422 83.2616L1.27145 87.1144C0.277013 87.3637 -0.421555 86.1537 0.291539 85.4172L11.3136 74.0321C11.6961 73.637 11.6961 73.0096 11.3136 72.6145L0.291538 61.2295C-0.421555 60.4929 0.277013 59.283 1.27145 59.5322L16.6422 63.3851C17.1756 63.5188 17.719 63.2051 17.8699 62.6763L22.2186 47.4384Z"/><path d="M49.0201 0.739384C49.3014 -0.246462 50.6986 -0.246461 50.9799 0.739384L55.3286 15.9773C55.4795 16.5061 56.0228 16.8198 56.5563 16.6861L71.927 12.8332C72.9215 12.5839 73.62 13.7939 72.907 14.5305L61.8849 25.9155C61.5024 26.3106 61.5024 26.938 61.8849 27.3331L72.907 38.7181C73.62 39.4547 72.9215 40.6647 71.927 40.4154L56.5563 36.5625C56.0228 36.4288 55.4795 36.7425 55.3286 37.2713L50.9799 52.5092C50.6986 53.4951 49.3014 53.4951 49.0201 52.5092L44.6714 37.2713C44.5205 36.7425 43.9772 36.4288 43.4437 36.5625L28.073 40.4154C27.0785 40.6647 26.38 39.4547 27.093 38.7181L38.1151 27.3331C38.4976 26.938 38.4976 26.3106 38.1151 25.9155L27.093 14.5305C26.38 13.7939 27.0785 12.5839 28.073 12.8332L43.4437 16.6861C43.9772 16.8198 44.5205 16.5061 44.6714 15.9773L49.0201 0.739384Z"/></svg>
     </div>
     <div class="about-title">Asterism</div>
-    <div class="about-version">v2.0</div>
+    <div class="about-version">v2.1</div>
     <div class="about-tagline">An Are.na image browser for Figma.</div>
 
     <div class="about-links">
@@ -1893,13 +1893,18 @@
   }
 
   // Same bounded concurrency as probeChannels, for the same reason.
-  async function probeNsfwList(list, onProgress) {
+  //
+  // `isCurrent` lets a caller abandon a run mid-flight. Search needs it:
+  // typing produces a search per pause, and without it the results you've
+  // already moved on from keep spending requests you no longer have a use for.
+  async function probeNsfwList(list, onProgress, isCurrent) {
     if (!token) return;
     const pending = list.filter((c) => !nsfwProbed.has(c.slug));
     if (!pending.length) return;
     let i = 0;
     await Promise.all(Array.from({ length: Math.min(6, pending.length) }, async () => {
       while (i < pending.length) {
+        if (isCurrent && !isCurrent()) return;
         await probeNsfw(pending[i++].slug);
       }
     }));
@@ -2078,7 +2083,10 @@
     searchEl.innerHTML = "";
   }
 
+  let searchGen = 0;
+
   async function runSearch(q) {
+    const gen = ++searchGen;
     try {
       // Signed in, search v3 so private channels can surface; otherwise v2,
       // which is the only search that answers anonymously.
@@ -2102,17 +2110,22 @@
       // the row as a size cue; they don't decide the order.
       if (!channels.length) { hideSearch(); return; }
 
+      if (gen !== searchGen) return;   // a later keystroke already won
       renderSearchRows(channels);
 
       // Drawn first, tagged a beat later. The NSFW flag costs one request per
       // result, and holding twenty relevant channels back for a second to
-      // label the occasional one is the worse trade. Guarded on the query
-      // still being current so a slow probe can't repaint a stale list.
-      probeNsfwList(channels, () => {
-        if (input.value.trim() === q && searchEl.classList.contains("visible")) {
-          renderSearchRows(channels);
-        }
-      });
+      // label the occasional one is the worse trade. Superseded searches stop
+      // probing rather than spend requests on a list nobody is looking at.
+      probeNsfwList(
+        channels,
+        () => {
+          if (gen === searchGen && searchEl.classList.contains("visible")) {
+            renderSearchRows(channels);
+          }
+        },
+        () => gen === searchGen
+      );
     } catch (_) { hideSearch(); }
   }
 
